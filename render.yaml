@@ -1,0 +1,37 @@
+services:
+  - type: web
+    name: sten-chatbot-backend
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: npm start
+    healthCheckPath: /health
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: META_VERIFY_TOKEN
+        sync: false
+      - key: META_ACCESS_TOKEN
+        sync: false
+      - key: META_PHONE_NUMBER_ID
+        sync: false
+      - key: WHATSAPP_BUSINESS_ACCOUNT_ID
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: OPENAI_MODEL
+        value: gpt-4.1-mini
+      - key: BASE44_API_BASE_URL
+        value: https://sten-bot-flow.base44.app/api
+      - key: BASE44_APP_ID
+        value: 6a0b8ecaa62d1dda9f17f8ae
+      - key: BASE44_API_KEY
+        sync: false
+      - key: BASE44_MESSAGE_HAS_CLIENT_ID
+        value: "false"
+      - key: BOT_BUSINESS_NAME
+        value: La Torre LED Shop
+      - key: BOT_TIMEZONE
+        value: America/Tijuana
