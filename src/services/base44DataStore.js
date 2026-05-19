@@ -73,6 +73,14 @@ export async function findOrCreateConversation({ channel, message }) {
   });
 }
 
+export async function getConversationHistory(conversationId, limit = 10) {
+  return listEntity("Message", {
+    q: { conversation_id: conversationId },
+    limit,
+    sortBy: "created_date"
+  });
+}
+
 export async function createConversationMessage({
   conversation,
   channel,
@@ -93,7 +101,6 @@ export async function createConversationMessage({
     raw_payload: rawPayload ? JSON.stringify(rawPayload) : ""
   };
 
-  // Activar cuando el campo client_id exista en Message dentro de Base44.
   if (config.base44.includeClientIdOnMessages) {
     data.client_id = channel.client_id;
   }
@@ -129,21 +136,10 @@ export async function createLeadIfCommercialIntent({ conversation, channel, mess
 function hasCommercialIntent(text) {
   const normalized = text.toLowerCase();
   const keywords = [
-    "precio",
-    "cuanto",
-    "cuanto cuesta",
-    "cotizacion",
-    "cotizar",
-    "comprar",
-    "instalacion",
-    "instalar",
-    "mayoreo",
-    "disponible",
-    "tienes",
-    "ocupo",
-    "necesito"
+    "precio", "cuanto", "cuanto cuesta", "cotizacion", "cotizar",
+    "comprar", "instalacion", "instalar", "mayoreo", "disponible",
+    "tienes", "ocupo", "necesito"
   ];
-
   return keywords.some((keyword) => normalized.includes(keyword));
 }
 
@@ -154,12 +150,4 @@ function extractProductInterest(text) {
 function trimPreview(text, maxLength = 140) {
   if (!text) return "";
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
-
-  export async function getConversationHistory(conversationId, limit = 10) {
-  return listEntity("Message", {
-    q: { conversation_id: conversationId },
-    limit,
-    sortBy: "created_date"
-  });
-}
 }
