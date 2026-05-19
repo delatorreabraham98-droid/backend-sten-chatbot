@@ -5,6 +5,7 @@ import {
   createConversationMessage,
   createLeadIfCommercialIntent,
   findOrCreateConversation,
+  getConversationHistory,
   getRuntimeContextForWhatsApp
 } from "../services/base44DataStore.js";
 import { sendWhatsAppTextMessage } from "../services/metaWhatsApp.js";
