@@ -154,4 +154,12 @@ function extractProductInterest(text) {
 function trimPreview(text, maxLength = 140) {
   if (!text) return "";
   return text.length > maxLength ? `${text.slice(0, maxLength - 3)}...` : text;
+
+  export async function getConversationHistory(conversationId, limit = 10) {
+  return listEntity("Message", {
+    q: { conversation_id: conversationId },
+    limit,
+    sortBy: "created_date"
+  });
+}
 }
