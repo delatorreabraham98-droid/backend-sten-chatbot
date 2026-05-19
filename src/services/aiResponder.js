@@ -1,60 +1,21 @@
-import OpenAI from "openai";
-import { config } from "../config.js";
-
-const openai = new OpenAI({ apiKey: config.openai.apiKey });
-
 export async function generateBotReply({
   customerMessage,
   customerName,
-  bot,
-  client,
-  knowledgeItems = [],
   conversationHistory = []
 }) {
-  const businessName = client?.business_name || config.bot.businessName;
-  const botPersonality = bot?.bot_personality || "Eres un asistente amable, practico y orientado a ventas.";
-  const businessContext = bot?.business_context || "El negocio vende productos LED.";
-  const escalationMessage = bot?.human_escalation_message
-    || "Un asesor te atendera en breve para continuar con tu solicitud.";
-  const timezone = bot?.timezone || config.bot.timezone;
-
-  const knowledgeContext = knowledgeItems.length
-    ? knowledgeItems.map((item) => `- ${item.title}: ${item.content}`).join("\n")
-    : "Sin base de conocimiento adicional registrada.";
-
-  const systemPrompt = [
-    `Eres el asistente de ventas de ${businessName}.`,
-    botPersonality,
-    "Responde en espanol claro, breve y util.",
-    businessContext,
-    "No inventes precios, stock, tiempos de entrega ni garantias si no estan en el contexto.",
-    `Si el cliente pide cotizacion final, instalacion especifica, mayoreo o hablar con una persona, pide sus datos y responde con este mensaje de escalacion: ${escalationMessage}`,
-    "Datos a pedir para lead: nombre, producto de interes, ciudad/colonia y si requiere instalacion.",
-    `Zona horaria del negocio: ${timezone}.`,
-    `Base de conocimiento disponible:\n${knowledgeContext}`
-  ].join(" ");
-
-  // Construir historial de conversacion para OpenAI
-  const historyMessages = conversationHistory.flatMap((msg) => {
-    if (msg.direction === "inbound") {
-      return [{ role: "user", content: msg.message_text }];
-    } else if (msg.direction === "outbound" && msg.sender_type === "bot") {
-      return [{ role: "assistant", content: msg.message_text }];
-    }
-    return [];
+  const response = await fetch('TU_SUPERAGENTE_BASE_URL/messages', {
+    method: 'POST',
+    headers: {
+      'Authorization': 'Bearer TU_SUPERAGENTE_API_KEY',
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({
+      message: customerMessage,
+      user_id: customerName || 'cliente_whatsapp'
+    })
   });
 
-  const completion = await openai.chat.completions.create({
-    model: config.openai.model,
-    temperature: 0.4,
-    max_tokens: 220,
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...historyMessages,
-      { role: "user", content: `${customerName ? `Nombre del cliente: ${customerName}\n` : ""}Mensaje: ${customerMessage}` }
-    ]
-  });
-
-  return completion.choices[0]?.message?.content?.trim()
-    || "Gracias por escribirnos. Un asesor te atendera en breve.";
+  const data = await response.json();
+  return data.content?.[0]?.text || 
+    "Gracias por escribirnos. Un asesor te atenderá en breve.";
 }
