@@ -3,10 +3,10 @@ export async function generateBotReply({
   customerName,
   conversationHistory = []
 }) {
-  const response = await fetch('TU_SUPERAGENTE_BASE_URL/messages', {
+  const response = await fetch('https://app.base44.com/api/agents/6a08d0802321c6e62c97095e/messages', {
     method: 'POST',
     headers: {
-      'Authorization': 'Bearer TU_SUPERAGENTE_API_KEY',
+      'Authorization': 'c28a210d9a404ed385b758fa4d975b1b',
       'Content-Type': 'application/json'
     },
     body: JSON.stringify({
