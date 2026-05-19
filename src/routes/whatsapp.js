@@ -51,12 +51,15 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         rawPayload: message.raw
       });
 
+      const conversationHistory = await getConversationHistory(conversation.id, 10);
+
       const reply = await generateBotReply({
         customerMessage: message.text,
         customerName: message.customerName,
         bot: runtimeContext.bot,
         client: runtimeContext.client,
-        knowledgeItems: runtimeContext.knowledgeItems
+        knowledgeItems: runtimeContext.knowledgeItems,
+        conversationHistory
       });
 
       const metaResponse = await sendWhatsAppTextMessage({
