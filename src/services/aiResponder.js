@@ -1,16 +1,15 @@
 import OpenAI from "openai";
 import { config } from "../config.js";
 
-const openai = new OpenAI({
-  apiKey: config.openai.apiKey
-});
+const openai = new OpenAI({ apiKey: config.openai.apiKey });
 
 export async function generateBotReply({
   customerMessage,
   customerName,
   bot,
   client,
-  knowledgeItems = []
+  knowledgeItems = [],
+  conversationHistory = []
 }) {
   const businessName = client?.business_name || config.bot.businessName;
   const botPersonality = bot?.bot_personality || "Eres un asistente amable, practico y orientado a ventas.";
@@ -18,10 +17,9 @@ export async function generateBotReply({
   const escalationMessage = bot?.human_escalation_message
     || "Un asesor te atendera en breve para continuar con tu solicitud.";
   const timezone = bot?.timezone || config.bot.timezone;
+
   const knowledgeContext = knowledgeItems.length
-    ? knowledgeItems
-      .map((item) => `- ${item.title}: ${item.content}`)
-      .join("\n")
+    ? knowledgeItems.map((item) => `- ${item.title}: ${item.content}`).join("\n")
     : "Sin base de conocimiento adicional registrada.";
 
   const systemPrompt = [
@@ -36,10 +34,15 @@ export async function generateBotReply({
     `Base de conocimiento disponible:\n${knowledgeContext}`
   ].join(" ");
 
-  const userPrompt = [
-    customerName ? `Nombre del cliente: ${customerName}` : "Nombre del cliente: desconocido",
-    `Mensaje del cliente: ${customerMessage}`
-  ].join("\n");
+  // Construir historial de conversacion para OpenAI
+  const historyMessages = conversationHistory.flatMap((msg) => {
+    if (msg.direction === "inbound") {
+      return [{ role: "user", content: msg.message_text }];
+    } else if (msg.direction === "outbound" && msg.sender_type === "bot") {
+      return [{ role: "assistant", content: msg.message_text }];
+    }
+    return [];
+  });
 
   const completion = await openai.chat.completions.create({
     model: config.openai.model,
@@ -47,7 +50,8 @@ export async function generateBotReply({
     max_tokens: 220,
     messages: [
       { role: "system", content: systemPrompt },
-      { role: "user", content: userPrompt }
+      ...historyMessages,
+      { role: "user", content: `${customerName ? `Nombre del cliente: ${customerName}\n` : ""}Mensaje: ${customerMessage}` }
     ]
   });
 
