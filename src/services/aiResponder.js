@@ -45,7 +45,8 @@ export async function generateBotReply({
   // DETECTAR PRIMER MENSAJE
   // =====================================
 
-  const isFirstMessage = conversationHistory.length === 0;
+  const isFirstMessage =
+    conversationHistory.length === 0;
 
   // =====================================
   // PERSONALIDAD
@@ -119,7 +120,7 @@ WhatsApp:
 `;
 
   // =====================================
-  // CONTEXTO PROPIETARIO
+  // CONTEXTO DEL PROPIETARIO
   // =====================================
 
   const ownerContext = `
@@ -169,7 +170,9 @@ para atender personalmente.
 
   const knowledgeContext = knowledgeItems.length
     ? knowledgeItems
-        .map((item) => `- ${item.title}: ${item.content}`)
+        .map((item) =>
+          `- ${item.title}: ${item.content}`
+        )
         .join("\n")
     : "Sin base de conocimiento adicional.";
 
@@ -217,10 +220,52 @@ Si el PRIMER mensaje del cliente contiene:
 
 NO hagas preguntas primero.
 
-Debes identificar directamente:
-- qué foco usa en altas
-- qué foco usa en bajas
-- o si usa altas y bajas en el mismo foco
+Debes identificar correctamente:
+
+1. El tipo de foco
+2. Si el vehículo usa:
+   - altas y bajas separadas
+   o
+   - altas y bajas en el mismo foco
+
+IMPORTANTE:
+
+Si el foco es:
+- H13
+- H4
+- 9004
+- 9007
+
+Entonces normalmente es:
+"altas y bajas en el mismo foco"
+
+NO digas "separadas"
+en esos casos.
+
+MUY IMPORTANTE:
+
+H13 normalmente significa:
+- altas y bajas en el mismo foco
+
+H4 normalmente significa:
+- altas y bajas en el mismo foco
+
+9004 normalmente significa:
+- altas y bajas en el mismo foco
+
+9007 normalmente significa:
+- altas y bajas en el mismo foco
+
+NO puedes decir:
+"altas y bajas separadas"
+si el foco es:
+- H13
+- H4
+- 9004
+- 9007
+
+Porque esos modelos normalmente usan
+un solo foco dual.
 
 Puedes usar internamente:
 https://www.superbrightleds.com/vehicle-lights
@@ -374,38 +419,41 @@ ${knowledgeContext}
   // HISTORIAL
   // =====================================
 
-  const historyMessages = conversationHistory.flatMap((msg) => {
+  const historyMessages =
+    conversationHistory.flatMap((msg) => {
 
-    if (msg.direction === "inbound") {
-      return [
-        {
-          role: "user",
-          content: msg.message_text
-        }
-      ];
-    }
+      if (msg.direction === "inbound") {
+        return [
+          {
+            role: "user",
+            content: msg.message_text
+          }
+        ];
+      }
 
-    if (
-      msg.direction === "outbound" &&
-      msg.sender_type === "bot"
-    ) {
-      return [
-        {
-          role: "assistant",
-          content: msg.message_text
-        }
-      ];
-    }
+      if (
+        msg.direction === "outbound" &&
+        msg.sender_type === "bot"
+      ) {
+        return [
+          {
+            role: "assistant",
+            content: msg.message_text
+          }
+        ];
+      }
 
-    return [];
-  });
+      return [];
+    });
 
   // =====================================
   // MENSAJE FINAL
   // =====================================
 
   const finalUserMessage = `
-${isFirstMessage ? `SALUDO ACTUAL: ${greeting}` : ""}
+${isFirstMessage
+  ? `SALUDO ACTUAL: ${greeting}`
+  : ""}
 
 ${customerName
   ? `Nombre del cliente: ${customerName}`
@@ -424,7 +472,7 @@ ${customerMessage}
 
       model: config.openai.model,
 
-      temperature: 0.2,
+      temperature: 0.1,
 
       max_tokens: 220,
 
