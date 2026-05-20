@@ -11,7 +11,7 @@ const openai = new OpenAI({
 });
 
 // =====================================
-// ARCHIVO BASE DE DATOS LOCAL
+// BASE LOCAL
 // =====================================
 
 const DB_PATH = path.resolve(
@@ -19,7 +19,7 @@ const DB_PATH = path.resolve(
 );
 
 // =====================================
-// CARGAR BASE LOCAL
+// CARGAR BASE
 // =====================================
 
 async function loadVehicleDatabase() {
@@ -39,7 +39,7 @@ async function loadVehicleDatabase() {
 }
 
 // =====================================
-// GUARDAR BASE LOCAL
+// GUARDAR BASE
 // =====================================
 
 async function saveVehicleDatabase(data) {
@@ -58,40 +58,37 @@ async function saveVehicleDatabase(data) {
 function detectVehicle(message) {
 
   const cleanMessage =
-    message.trim();
-
-  // =====================================
-  // FORMATO:
-  // Camaro 2010
-  // Civic 2018
-  // Silverado 2015
-  // =====================================
+    message
+      .trim()
+      .toLowerCase();
 
   const regex1 =
-    /\b([A-Za-z]+)\s+((19|20)\d{2})\b/i;
-
-  // =====================================
-  // FORMATO:
-  // 2010 Camaro
-  // 2018 Civic
-  // =====================================
+    /\b([a-z]+)\s+((19|20)\d{2})\b/i;
 
   const regex2 =
-    /\b((19|20)\d{2})\s+([A-Za-z]+)\b/i;
-
-  // =====================================
-  // FORMATO:
-  // Ford Focus 2002
-  // Chevrolet Camaro 2010
-  // =====================================
+    /\b((19|20)\d{2})\s+([a-z]+)\b/i;
 
   const regex3 =
-    /\b([A-Za-z]+)\s+([A-Za-z0-9]+)\s+((19|20)\d{2})\b/i;
+    /\b([a-z]+)\s+([a-z0-9]+)\s+((19|20)\d{2})\b/i;
+
+  const regex4 =
+    /\b(?:para|ocupo|busco|quiero|necesito)\s+(?:un\s+|una\s+)?([a-z]+(?:\s+[a-z0-9]+)?)\s+((19|20)\d{2})\b/i;
 
   let match =
+    cleanMessage.match(regex4);
+
+  if (match) {
+
+    return `${match[1]} ${match[2]}`
+      .trim()
+      .toLowerCase();
+  }
+
+  match =
     cleanMessage.match(regex3);
 
   if (match) {
+
     return match[0]
       .trim()
       .toLowerCase();
@@ -101,6 +98,7 @@ function detectVehicle(message) {
     cleanMessage.match(regex1);
 
   if (match) {
+
     return match[0]
       .trim()
       .toLowerCase();
@@ -110,6 +108,7 @@ function detectVehicle(message) {
     cleanMessage.match(regex2);
 
   if (match) {
+
     return match[0]
       .trim()
       .toLowerCase();
@@ -119,7 +118,25 @@ function detectVehicle(message) {
 }
 
 // =====================================
-// DETERMINAR SI ES DUAL
+// SALUDO
+// =====================================
+
+function shouldIncludeGreeting(message) {
+
+  const text =
+    message.toLowerCase();
+
+  return (
+    text.includes("hola") ||
+    text.includes("buenas") ||
+    text.includes("buenos días") ||
+    text.includes("buenas tardes") ||
+    text.includes("buenas noches")
+  );
+}
+
+// =====================================
+// DUAL BEAM
 // =====================================
 
 function isDualBeamBulb(bulb) {
@@ -134,6 +151,23 @@ function isDualBeamBulb(bulb) {
   return dualBulbs.includes(
     bulb?.toUpperCase()
   );
+}
+
+// =====================================
+// EXTRAER FOCO
+// =====================================
+
+function extractBulb(text) {
+
+  const matches = text.match(
+    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/g
+  );
+
+  if (!matches?.length) {
+    return null;
+  }
+
+  return matches[0];
 }
 
 // =====================================
@@ -162,22 +196,32 @@ async function scrapeSuperBrightLEDs(
       response.data
     );
 
-    const text = $("body").text();
+    const text =
+      $("body").text();
 
-    const matches = text.match(
-      /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/g
-    );
+    const bulb =
+      extractBulb(text);
 
-    if (!matches?.length) {
+    if (!bulb) {
       return null;
     }
 
-    const bulb = matches[0];
+    const sameBulb =
+      isDualBeamBulb(bulb);
 
     return {
-      bulb,
-      sameBulb:
-        isDualBeamBulb(bulb),
+      bulb: sameBulb
+        ? bulb
+        : {
+            high: bulb,
+            low:
+              bulb === "9005"
+                ? "9006"
+                : bulb
+          },
+
+      sameBulb,
+
       source:
         "superbrightleds"
     };
@@ -193,7 +237,9 @@ async function scrapeSuperBrightLEDs(
 // SCRAPING AUTOZONE
 // =====================================
 
-async function scrapeAutoZone(vehicle) {
+async function scrapeAutoZone(
+  vehicle
+) {
 
   try {
 
@@ -213,23 +259,34 @@ async function scrapeAutoZone(vehicle) {
       response.data
     );
 
-    const text = $("body").text();
+    const text =
+      $("body").text();
 
-    const matches = text.match(
-      /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/g
-    );
+    const bulb =
+      extractBulb(text);
 
-    if (!matches?.length) {
+    if (!bulb) {
       return null;
     }
 
-    const bulb = matches[0];
+    const sameBulb =
+      isDualBeamBulb(bulb);
 
     return {
-      bulb,
-      sameBulb:
-        isDualBeamBulb(bulb),
-      source: "autozone"
+      bulb: sameBulb
+        ? bulb
+        : {
+            high: bulb,
+            low:
+              bulb === "9005"
+                ? "9006"
+                : bulb
+          },
+
+      sameBulb,
+
+      source:
+        "autozone"
     };
 
   } catch {
@@ -243,7 +300,9 @@ async function scrapeAutoZone(vehicle) {
 // SCRAPING ROCKAUTO
 // =====================================
 
-async function scrapeRockAuto(vehicle) {
+async function scrapeRockAuto(
+  vehicle
+) {
 
   try {
 
@@ -263,23 +322,34 @@ async function scrapeRockAuto(vehicle) {
       response.data
     );
 
-    const text = $("body").text();
+    const text =
+      $("body").text();
 
-    const matches = text.match(
-      /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/g
-    );
+    const bulb =
+      extractBulb(text);
 
-    if (!matches?.length) {
+    if (!bulb) {
       return null;
     }
 
-    const bulb = matches[0];
+    const sameBulb =
+      isDualBeamBulb(bulb);
 
     return {
-      bulb,
-      sameBulb:
-        isDualBeamBulb(bulb),
-      source: "rockauto"
+      bulb: sameBulb
+        ? bulb
+        : {
+            high: bulb,
+            low:
+              bulb === "9005"
+                ? "9006"
+                : bulb
+          },
+
+      sameBulb,
+
+      source:
+        "rockauto"
     };
 
   } catch {
@@ -290,16 +360,18 @@ async function scrapeRockAuto(vehicle) {
 }
 
 // =====================================
-// OBTENER DATOS VEHICULO
+// OBTENER INFO VEHICULO
 // =====================================
 
-async function getVehicleInfo(vehicle) {
+async function getVehicleInfo(
+  vehicle
+) {
 
   const db =
     await loadVehicleDatabase();
 
   // =====================================
-  // 1. BUSCAR LOCAL
+  // CACHE
   // =====================================
 
   if (db[vehicle]) {
@@ -308,10 +380,7 @@ async function getVehicleInfo(vehicle) {
       "Vehículo encontrado localmente"
     );
 
-    return {
-      ...db[vehicle],
-      fromCache: true
-    };
+    return db[vehicle];
   }
 
   console.log(
@@ -319,7 +388,7 @@ async function getVehicleInfo(vehicle) {
   );
 
   // =====================================
-  // 2. SCRAPING
+  // SCRAPERS
   // =====================================
 
   const scrapers = [
@@ -335,11 +404,7 @@ async function getVehicleInfo(vehicle) {
       const result =
         await scraper(vehicle);
 
-      if (result?.bulb) {
-
-        // =====================================
-        // 3. GUARDAR LOCALMENTE
-        // =====================================
+      if (result) {
 
         db[vehicle] = result;
 
@@ -355,7 +420,6 @@ async function getVehicleInfo(vehicle) {
     } catch (error) {
 
       console.log(
-        "Scraping error:",
         error.message
       );
 
@@ -367,96 +431,98 @@ async function getVehicleInfo(vehicle) {
 }
 
 // =====================================
-// GENERAR PRECIOS
-// =====================================
-
-function generatePrices(
-  sameBulb
-) {
-
-  if (sameBulb) {
-
-    return {
-      cob2: 250,
-      cob4: 350,
-      csp: 450
-    };
-  }
-
-  return {
-    cob2: 200,
-    cob4: 300,
-    csp: 400
-  };
-}
-
-// =====================================
-// RESPUESTA DIRECTA
+// RESPUESTA FINAL
 // =====================================
 
 function buildVehicleReply({
   greeting,
+  includeGreeting,
   vehicle,
   bulb,
   sameBulb
 }) {
 
-  const prices =
-    generatePrices(sameBulb);
+  const formattedVehicle =
+    vehicle
+      .split(" ")
+      .map(word =>
+        word.charAt(0)
+          .toUpperCase() +
+        word.slice(1)
+      )
+      .join(" ");
+
+  const greetingText =
+    includeGreeting
+      ? `${greeting}\n`
+      : "";
+
+  // =====================================
+  // MISMO FOCO
+  // =====================================
 
   if (sameBulb) {
 
     return `
-${greeting}
+${greetingText}[${formattedVehicle}]
 
-[${vehicle}]
+🔦Usa ${bulb} para altas y bajas
 
-🔦 Altas y bajas: ${bulb}
+· COB 2 Caras $250 MXN 6,000 lúmenes ✅ 3 meses de garantía
+· COB 4 Caras $350 MXN 12,000 lúmenes ✅ 3 meses de garantía
+· CSP Premium $500 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
 
-· COB 2 Caras $${prices.cob2} MXN
-· COB 4 Caras $${prices.cob4} MXN
-· CSP Premium $${prices.csp} MXN ⭐ (recomendado)
-
-✅ 6 meses de garantía
 🔧 Instalación: $100 MXN
 
 📍 De La Torre LED Shop
 📱 686 471 9077
 
 🚗 Entregas:
-Portales · Juventud 2000 · Costco
-Soriana Anáhuac · Smart & Final
-Plaza Mandarin
+✅ Portales
+✅ Juventud 2000
+✅ Costco
+✅ Soriana Anáhuac
+✅ Smart & Final
+✅ Plaza Mandarin
 
-🚘 Domicilio:
+🚘 A domicilio:
 $100 MXN adicionales
 `.trim();
   }
 
+  // =====================================
+  // SEPARADOS
+  // =====================================
+
   return `
-${greeting}
+${greetingText}[${formattedVehicle}]
 
-[${vehicle}]
+🔦Usa ${bulb.high} para las altas
 
-🔦 Altas: ${bulb}
-🔦 Bajas: ${bulb}
+· COB 2 Caras $200 MXN 6,000 lúmenes ✅ 3 meses de garantía
+· COB 4 Caras $300 MXN 12,000 lúmenes ✅ 3 meses de garantía
+· CSP Premium $450 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
 
-· COB 2 Caras $${prices.cob2} MXN
-· COB 4 Caras $${prices.cob4} MXN
-· CSP Premium $${prices.csp} MXN ⭐ (recomendado)
+🔦Usa ${bulb.low} para las bajas
 
-✅ 6 meses de garantía
+· COB 2 Caras $200 MXN 6,000 lúmenes ✅ 3 meses de garantía
+· COB 4 Caras $300 MXN 12,000 lúmenes ✅ 3 meses de garantía
+· CSP Premium $450 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
+
 🔧 Instalación: $100 MXN
 
 📍 De La Torre LED Shop
 📱 686 471 9077
 
 🚗 Entregas:
-Portales · Juventud 2000 · Costco
-Soriana Anáhuac · Smart & Final
-Plaza Mandarin
+✅ Portales
+✅ Juventud 2000
+✅ Costco
+✅ Soriana Anáhuac
+✅ Smart & Final
+✅ Plaza Mandarin
 
-🚘 Domicilio:
+🚘 A domicilio:
 $100 MXN adicionales
 `.trim();
 }
@@ -467,7 +533,6 @@ $100 MXN adicionales
 
 export async function generateBotReply({
   customerMessage,
-  customerName,
   conversationHistory = []
 }) {
 
@@ -481,20 +546,29 @@ export async function generateBotReply({
     new Intl.DateTimeFormat("es-MX", {
       hour: "numeric",
       hour12: false,
-      timeZone: "America/Tijuana"
+      timeZone:
+        "America/Tijuana"
     }).format(now)
   );
 
   let greeting =
     "Buenas tardes";
 
-  if (hour >= 5 && hour < 12) {
-    greeting = "Buenos días";
+  if (
+    hour >= 5 &&
+    hour < 12
+  ) {
+
+    greeting =
+      "Buenos días";
+
   } else if (
     hour >= 20 ||
     hour < 5
   ) {
-    greeting = "Buenas noches";
+
+    greeting =
+      "Buenas noches";
   }
 
   // =====================================
@@ -502,33 +576,37 @@ export async function generateBotReply({
   // =====================================
 
   const vehicle =
-    detectVehicle(customerMessage);
+    detectVehicle(
+      customerMessage
+    );
 
   // =====================================
-  // SI HAY VEHICULO
+  // RESPUESTA AUTOMOTRIZ
   // =====================================
 
   if (vehicle) {
 
     const vehicleInfo =
-      await getVehicleInfo(vehicle);
+      await getVehicleInfo(
+        vehicle
+      );
 
     if (vehicleInfo) {
 
       return buildVehicleReply({
+
         greeting,
-        vehicle:
-          vehicle
-            .split(" ")
-            .map(
-              word =>
-                word.charAt(0)
-                  .toUpperCase() +
-                word.slice(1)
-            )
-            .join(" "),
+
+        includeGreeting:
+          shouldIncludeGreeting(
+            customerMessage
+          ),
+
+        vehicle,
+
         bulb:
           vehicleInfo.bulb,
+
         sameBulb:
           vehicleInfo.sameBulb
       });
@@ -543,15 +621,16 @@ ahorita te confirmo.
   }
 
   // =====================================
-  // OPENAI SOLO PARA CHAT
+  // FALLBACK OPENAI
   // =====================================
 
   const completion =
     await openai.chat.completions.create({
 
-      model: config.openai.model,
+      model:
+        config.openai.model,
 
-      temperature: 0.3,
+      temperature: 0.1,
 
       max_tokens: 120,
 
@@ -562,7 +641,7 @@ ahorita te confirmo.
 Eres el vendedor de De La Torre LED Shop.
 
 SOLO vendes:
-- luces LED delanteras para automóvil
+- luces LED delanteras automotrices
 
 NO menciones:
 - tiras LED
@@ -570,24 +649,13 @@ NO menciones:
 - paneles
 - motos
 
-Hablas como persona real de Mexicali.
+Hablas como persona real
+de Mexicali.
 
-Respuestas:
-- cortas
+Mensajes:
+- cortos
 - naturales
-- WhatsApp real
-
-Si el cliente menciona:
-- H13
-- H11
-- H4
-- 9005
-- 9006
-- foco
-- LED
-- luces delanteras
-
-entiende que habla de focos LED automotrices.
+- tipo WhatsApp
 `
         },
 
@@ -626,7 +694,8 @@ entiende que habla de focos LED automotrices.
 
         {
           role: "user",
-          content: customerMessage
+          content:
+            customerMessage
         }
       ]
     });
