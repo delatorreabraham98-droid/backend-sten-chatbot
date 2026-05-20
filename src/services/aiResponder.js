@@ -67,9 +67,21 @@ async function loadVehicleDatabase() {
         "utf8"
       );
 
-    return JSON.parse(file);
+    const parsed =
+      JSON.parse(file);
 
-  } catch {
+    console.log(
+      "DB cargada correctamente"
+    );
+
+    return parsed;
+
+  } catch (error) {
+
+    console.log(
+      "Error leyendo DB:",
+      error.message
+    );
 
     return {};
   }
@@ -83,15 +95,41 @@ async function saveVehicleDatabase(
   data
 ) {
 
-  await fs.writeFile(
-    DB_PATH,
-    JSON.stringify(
-      data,
-      null,
-      2
-    ),
-    "utf8"
-  );
+  try {
+
+    console.log(
+      "Guardando vehicleBulbs.json..."
+    );
+
+    await fs.writeFile(
+      DB_PATH,
+      JSON.stringify(
+        data,
+        null,
+        2
+      ),
+      "utf8"
+    );
+
+    console.log(
+      "DB guardada correctamente"
+    );
+
+    console.log(
+      JSON.stringify(
+        data,
+        null,
+        2
+      )
+    );
+
+  } catch (error) {
+
+    console.log(
+      "Error guardando DB:",
+      error.message
+    );
+  }
 }
 
 // =====================================
@@ -173,6 +211,10 @@ function detectVehicle(message) {
       ? modelMatch[0]
       : null;
 
+  // =====================================
+  // MODELO + AÑO
+  // =====================================
+
   if (
     model &&
     year
@@ -185,6 +227,10 @@ function detectVehicle(message) {
     };
   }
 
+  // =====================================
+  // SOLO MODELO
+  // =====================================
+
   if (
     model &&
     !year
@@ -195,6 +241,10 @@ function detectVehicle(message) {
       model
     };
   }
+
+  // =====================================
+  // SOLO AÑO
+  // =====================================
 
   if (
     year &&
@@ -381,6 +431,11 @@ async function detectVehicleBulbsAI(
         vehicle
       );
 
+    console.log(
+      "Consultando OpenAI:",
+      normalizedVehicle
+    );
+
     const completion =
       await openai.chat.completions.create({
 
@@ -457,6 +512,11 @@ Si NO estás seguro:
         ?.content
         ?.trim();
 
+    console.log(
+      "Respuesta OpenAI:",
+      text
+    );
+
     if (!text) {
       return null;
     }
@@ -472,6 +532,10 @@ Si NO estás seguro:
       return null;
     }
 
+    // =====================================
+    // MISMO FOCO
+    // =====================================
+
     if (
       parsed.sameBulb &&
       parsed.bulb
@@ -486,6 +550,10 @@ Si NO estás seguro:
         sameBulb: true
       };
     }
+
+    // =====================================
+    // SEPARADOS
+    // =====================================
 
     if (
       parsed.sameBulb === false &&
@@ -512,7 +580,12 @@ Si NO estás seguro:
 
     return null;
 
-  } catch {
+  } catch (error) {
+
+    console.log(
+      "Error OpenAI:",
+      error.message
+    );
 
     return null;
   }
@@ -531,8 +604,13 @@ async function getVehicleInfo(
       vehicle
     );
 
+  console.log(
+    "Buscando vehículo:",
+    normalized
+  );
+
   // =====================================
-  // BASE MANUAL
+  // BASE OEM MANUAL
   // =====================================
 
   if (
@@ -541,13 +619,17 @@ async function getVehicleInfo(
     ]
   ) {
 
+    console.log(
+      "Vehículo encontrado en base OEM"
+    );
+
     return knownVehicles[
       normalized
     ];
   }
 
   // =====================================
-  // CACHE
+  // CACHE LOCAL
   // =====================================
 
   const db =
@@ -556,6 +638,10 @@ async function getVehicleInfo(
   if (
     db[normalized]
   ) {
+
+    console.log(
+      "Vehículo encontrado en cache"
+    );
 
     return db[normalized];
   }
@@ -570,8 +656,17 @@ async function getVehicleInfo(
     );
 
   if (!result) {
+
+    console.log(
+      "No se encontró información"
+    );
+
     return null;
   }
+
+  // =====================================
+  // GUARDAR
+  // =====================================
 
   db[normalized] =
     result;
@@ -584,7 +679,7 @@ async function getVehicleInfo(
 }
 
 // =====================================
-// RESPUESTA COTIZACION
+// RESPUESTA VEHICULO
 // =====================================
 
 function buildVehicleReply({
@@ -650,7 +745,7 @@ $100 MXN adicionales
   }
 
   // =====================================
-  // FOCOS SEPARADOS
+  // SEPARADOS
   // =====================================
 
   return `
@@ -731,209 +826,6 @@ export async function generateBotReply({
     };
 
   // =====================================
-  // PRIORIDAD:
-  // FLUJOS ACTIVOS
-  // =====================================
-
-  // =====================================
-  // ESPERANDO ENTREGA
-  // =====================================
-
-  if (
-    memory.stage ===
-    "awaiting_delivery_type"
-  ) {
-
-    if (
-      detectYes(
-        customerMessage
-      )
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          installation:
-            true,
-          deliveryType:
-            "domicilio"
-        }
-      );
-
-      return `
-Perfecto 👌
-
-La instalación a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    if (
-      detectInstallationIntent(
-        customerMessage
-      ) &&
-      detectDeliveryIntent(
-        customerMessage
-      )
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          installation:
-            true,
-          deliveryType:
-            "domicilio"
-        }
-      );
-
-      return `
-Perfecto 👌
-
-La instalación a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    if (
-      detectInstallationIntent(
-        customerMessage
-      )
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          installation:
-            true
-        }
-      );
-
-      return `
-Perfecto 👌
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    if (
-      detectDeliveryIntent(
-        customerMessage
-      )
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          deliveryType:
-            "domicilio"
-        }
-      );
-
-      return `
-Perfecto 👌
-
-El servicio a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-  }
-
-  // =====================================
-  // ESPERANDO DIRECCION
-  // =====================================
-
-  if (
-    memory.stage ===
-    "awaiting_address"
-  ) {
-
-    if (
-      looksLikeAddress(
-        customerMessage
-      )
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_schedule",
-          address:
-            customerMessage
-        }
-      );
-
-      return `
-Perfecto 👌
-
-¿Le queda hoy
-o mañana?
-`.trim();
-    }
-  }
-
-  // =====================================
-  // ESPERANDO HORARIO
-  // =====================================
-
-  if (
-    memory.stage ===
-    "awaiting_schedule"
-  ) {
-
-    conversationMemory.set(
-      conversationId,
-      {
-        ...memory,
-        stage:
-          "completed",
-        schedule:
-          customerMessage
-      }
-    );
-
-    return `
-Perfecto 👌
-
-Quedó agendada
-su instalación.
-
-En un momento
-le confirmamos horario
-por WhatsApp.
-
-📱 686 471 9077
-`.trim();
-  }
-
-  // =====================================
   // DETECTAR VEHICULO
   // =====================================
 
@@ -943,325 +835,110 @@ por WhatsApp.
     );
 
   // =====================================
-  // DETECTAR FOCO
-  // =====================================
-
-  const manualBulb =
-    detectBulb(
-      customerMessage
-    );
-
-  // =====================================
-  // CORRECCION MANUAL
+  // VEHICULO COMPLETO
   // =====================================
 
   if (
-    manualBulb &&
-    memory?.vehicle
+    vehicleData?.complete
   ) {
 
-    const sameBulb =
-      [
-        "H13",
-        "H4",
-        "9004",
-        "9007"
-      ].includes(
-        manualBulb
+    const vehicle =
+      vehicleData.vehicle;
+
+    const vehicleInfo =
+      await getVehicleInfo(
+        vehicle
       );
 
-    const updatedData = {
+    if (vehicleInfo) {
 
-      bulb: sameBulb
-        ? manualBulb
-        : {
-            high:
-              manualBulb,
-            low:
-              manualBulb
-          },
+      conversationMemory.set(
+        conversationId,
+        {
+          vehicle,
+          stage:
+            "quoted"
+        }
+      );
 
-      sameBulb
-    };
+      return buildVehicleReply({
 
-    return buildVehicleReply({
+        vehicle,
 
-      vehicle:
-        memory.vehicle,
+        bulb:
+          vehicleInfo.bulb,
 
-      bulb:
-        updatedData.bulb,
-
-      sameBulb:
-        updatedData.sameBulb
-    });
+        sameBulb:
+          vehicleInfo.sameBulb
+      });
+    }
   }
 
   // =====================================
-  // INTENCIONES MULTIPLES
-  // =====================================
-
-  const wantsPurchase =
-    detectPurchaseIntent(
-      customerMessage
-    );
-
-  const wantsDelivery =
-    detectDeliveryIntent(
-      customerMessage
-    );
-
-  const wantsInstallation =
-    detectInstallationIntent(
-      customerMessage
-    );
-
-  // =====================================
-  // COMPRA
+  // SOLO MODELO
   // =====================================
 
   if (
-    wantsPurchase &&
-    memory?.vehicle
+    vehicleData?.model &&
+    !vehicleData?.year
   ) {
-
-    // =====================================
-    // COMPRA + DOMICILIO + INSTALACION
-    // =====================================
-
-    if (
-      wantsDelivery &&
-      wantsInstallation
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          selectedProduct:
-            "CSP Premium",
-          installation:
-            true,
-          deliveryType:
-            "domicilio"
-        }
-      );
-
-      return `
-Órale 👌
-
-Perfecto,
-la instalación a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    // =====================================
-    // SOLO INSTALACION
-    // =====================================
-
-    if (
-      wantsInstallation
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          selectedProduct:
-            "CSP Premium",
-          installation:
-            true
-        }
-      );
-
-      return `
-Perfecto 👌
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    // =====================================
-    // SOLO DOMICILIO
-    // =====================================
-
-    if (
-      wantsDelivery
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          stage:
-            "awaiting_address",
-          selectedProduct:
-            "CSP Premium",
-          deliveryType:
-            "domicilio"
-        }
-      );
-
-      return `
-Perfecto 👌
-
-El servicio a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia
-se encuentra?
-`.trim();
-    }
-
-    // =====================================
-    // SOLO COMPRA
-    // =====================================
 
     conversationMemory.set(
       conversationId,
       {
         ...memory,
+        model:
+          vehicleData.model,
         stage:
-          "awaiting_delivery_type",
-        selectedProduct:
-          "CSP Premium"
+          "awaiting_year"
       }
     );
 
     return `
-Órale 👌
-
-La CSP Premium es la mejor opción,
-da más claridad y dura más.
-
-¿Quiere instalación
-o entrega a domicilio?
-`.trim();
-  }
-
-  // =====================================
-  // VEHICULO
-  // =====================================
-
-  if (vehicleData) {
-
-    // =====================================
-    // COMPLETO
-    // =====================================
-
-    if (
-      vehicleData.complete
-    ) {
-
-      const vehicle =
-        vehicleData.vehicle;
-
-      const vehicleInfo =
-        await getVehicleInfo(
-          vehicle
-        );
-
-      if (vehicleInfo) {
-
-        conversationMemory.set(
-          conversationId,
-          {
-            vehicle,
-            stage:
-              "quoted"
-          }
-        );
-
-        return buildVehicleReply({
-
-          vehicle,
-
-          bulb:
-            vehicleInfo.bulb,
-
-          sameBulb:
-            vehicleInfo.sameBulb
-        });
-      }
-    }
-
-    // =====================================
-    // SOLO MODELO
-    // =====================================
-
-    if (
-      vehicleData.model &&
-      !vehicleData.year
-    ) {
-
-      conversationMemory.set(
-        conversationId,
-        {
-          ...memory,
-          model:
-            vehicleData.model,
-          stage:
-            "awaiting_year"
-        }
-      );
-
-      return `
 ${greeting}
 
 ¿Qué año es su ${vehicleData.model}?
 `.trim();
-    }
+  }
 
-    // =====================================
-    // SOLO AÑO
-    // =====================================
+  // =====================================
+  // SOLO AÑO
+  // =====================================
 
-    if (
-      vehicleData.year &&
-      memory?.model
-    ) {
+  if (
+    vehicleData?.year &&
+    memory?.model
+  ) {
 
-      const vehicle =
-        `${memory.model} ${vehicleData.year}`;
+    const vehicle =
+      `${memory.model} ${vehicleData.year}`;
 
-      const vehicleInfo =
-        await getVehicleInfo(
-          vehicle
-        );
+    const vehicleInfo =
+      await getVehicleInfo(
+        vehicle
+      );
 
-      if (vehicleInfo) {
+    if (vehicleInfo) {
 
-        conversationMemory.set(
-          conversationId,
-          {
-            vehicle,
-            stage:
-              "quoted"
-          }
-        );
-
-        return buildVehicleReply({
-
+      conversationMemory.set(
+        conversationId,
+        {
           vehicle,
+          stage:
+            "quoted"
+        }
+      );
 
-          bulb:
-            vehicleInfo.bulb,
+      return buildVehicleReply({
 
-          sameBulb:
-            vehicleInfo.sameBulb
-        });
-      }
+        vehicle,
+
+        bulb:
+          vehicleInfo.bulb,
+
+        sameBulb:
+          vehicleInfo.sameBulb
+      });
     }
   }
 
