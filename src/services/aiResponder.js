@@ -57,19 +57,65 @@ async function saveVehicleDatabase(data) {
 
 function detectVehicle(message) {
 
-  const regex =
-    /\b(19|20)\d{2}\s+[A-Za-z]+\s+[A-Za-z0-9]+\b/i;
+  const cleanMessage =
+    message.trim();
 
-  const match =
-    message.match(regex);
+  // =====================================
+  // FORMATO:
+  // Camaro 2010
+  // Civic 2018
+  // Silverado 2015
+  // =====================================
 
-  if (!match) {
-    return null;
+  const regex1 =
+    /\b([A-Za-z]+)\s+((19|20)\d{2})\b/i;
+
+  // =====================================
+  // FORMATO:
+  // 2010 Camaro
+  // 2018 Civic
+  // =====================================
+
+  const regex2 =
+    /\b((19|20)\d{2})\s+([A-Za-z]+)\b/i;
+
+  // =====================================
+  // FORMATO:
+  // Ford Focus 2002
+  // Chevrolet Camaro 2010
+  // =====================================
+
+  const regex3 =
+    /\b([A-Za-z]+)\s+([A-Za-z0-9]+)\s+((19|20)\d{2})\b/i;
+
+  let match =
+    cleanMessage.match(regex3);
+
+  if (match) {
+    return match[0]
+      .trim()
+      .toLowerCase();
   }
 
-  return match[0]
-    .trim()
-    .toLowerCase();
+  match =
+    cleanMessage.match(regex1);
+
+  if (match) {
+    return match[0]
+      .trim()
+      .toLowerCase();
+  }
+
+  match =
+    cleanMessage.match(regex2);
+
+  if (match) {
+    return match[0]
+      .trim()
+      .toLowerCase();
+  }
+
+  return null;
 }
 
 // =====================================
@@ -513,21 +559,35 @@ ahorita te confirmo.
         {
           role: "system",
           content: `
-Eres el vendedor de confianza
-de De La Torre LED Shop.
+Eres el vendedor de De La Torre LED Shop.
 
-Hablas como persona real
-de Mexicali.
+SOLO vendes:
+- luces LED delanteras para automóvil
 
-RESPUESTAS:
+NO menciones:
+- tiras LED
+- decoración
+- paneles
+- motos
+
+Hablas como persona real de Mexicali.
+
+Respuestas:
 - cortas
 - naturales
 - WhatsApp real
 
-NO uses:
-- lenguaje corporativo
-- respuestas largas
-- emojis excesivos
+Si el cliente menciona:
+- H13
+- H11
+- H4
+- 9005
+- 9006
+- foco
+- LED
+- luces delanteras
+
+entiende que habla de focos LED automotrices.
 `
         },
 
