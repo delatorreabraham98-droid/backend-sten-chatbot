@@ -24,7 +24,7 @@ const conversationMemory =
   new Map();
 
 // =====================================
-// BASE OEM MANUAL
+// BASE OEM VERIFICADA
 // =====================================
 
 const knownVehicles = {
@@ -95,7 +95,7 @@ async function saveVehicleDatabase(
 }
 
 // =====================================
-// NORMALIZAR
+// NORMALIZAR VEHICULO
 // =====================================
 
 function normalizeVehicleName(
@@ -264,8 +264,8 @@ function detectDeliveryIntent(
 
   return (
     text.includes("domicilio") ||
-    text.includes("puedes venir") ||
-    text.includes("entrega")
+    text.includes("entrega") ||
+    text.includes("puedes venir")
   );
 }
 
@@ -282,34 +282,37 @@ function detectInstallationIntent(
 
   return (
     text.includes("instalacion") ||
+    text.includes("instalación") ||
     text.includes("instalar") ||
     text.includes("con instalación") ||
-    text.includes("con instalacion")
+    text.includes("con instalacion") ||
+    text.includes("las 2")
   );
 }
 
 // =====================================
-// DETECTAR RESPUESTA SI
+// DETECTAR SI
 // =====================================
 
 function detectYes(message) {
 
   const text =
-    message.toLowerCase()
+    message
+      .toLowerCase()
       .trim();
 
   return (
     text === "si" ||
     text === "sí" ||
-    text === "simon" ||
     text === "ok" ||
+    text === "sale" ||
     text === "va" ||
-    text === "sale"
+    text === "simon"
   );
 }
 
 // =====================================
-// DETECTAR COLONIA
+// DETECTAR DIRECCION
 // =====================================
 
 function looksLikeAddress(
@@ -364,7 +367,7 @@ function getGreeting() {
 }
 
 // =====================================
-// OPENAI DETECCION
+// OPENAI OEM
 // =====================================
 
 async function detectVehicleBulbsAI(
@@ -581,7 +584,7 @@ async function getVehicleInfo(
 }
 
 // =====================================
-// RESPUESTA VEHICULO
+// RESPUESTA COTIZACION
 // =====================================
 
 function buildVehicleReply({
@@ -647,7 +650,7 @@ $100 MXN adicionales
   }
 
   // =====================================
-  // SEPARADOS
+  // FOCOS SEPARADOS
   // =====================================
 
   return `
@@ -733,17 +736,13 @@ export async function generateBotReply({
   // =====================================
 
   // =====================================
-  // ESPERANDO TIPO ENTREGA
+  // ESPERANDO ENTREGA
   // =====================================
 
   if (
     memory.stage ===
     "awaiting_delivery_type"
   ) {
-
-    // =====================================
-    // RESPUESTA SI
-    // =====================================
 
     if (
       detectYes(
@@ -757,22 +756,58 @@ export async function generateBotReply({
           ...memory,
           stage:
             "awaiting_address",
+          installation:
+            true,
           deliveryType:
-            "instalacion"
+            "domicilio"
         }
       );
 
       return `
 Perfecto 👌
 
+La instalación a domicilio
+tiene costo adicional
+de $100 MXN.
+
 ¿En qué colonia
 se encuentra?
 `.trim();
     }
 
-    // =====================================
-    // INSTALACION
-    // =====================================
+    if (
+      detectInstallationIntent(
+        customerMessage
+      ) &&
+      detectDeliveryIntent(
+        customerMessage
+      )
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          installation:
+            true,
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+La instalación a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
 
     if (
       detectInstallationIntent(
@@ -786,8 +821,8 @@ se encuentra?
           ...memory,
           stage:
             "awaiting_address",
-          deliveryType:
-            "instalacion"
+          installation:
+            true
         }
       );
 
@@ -798,10 +833,6 @@ Perfecto 👌
 se encuentra?
 `.trim();
     }
-
-    // =====================================
-    // DOMICILIO
-    // =====================================
 
     if (
       detectDeliveryIntent(
@@ -967,15 +998,135 @@ por WhatsApp.
   }
 
   // =====================================
-  // DETECTAR COMPRA
+  // INTENCIONES MULTIPLES
+  // =====================================
+
+  const wantsPurchase =
+    detectPurchaseIntent(
+      customerMessage
+    );
+
+  const wantsDelivery =
+    detectDeliveryIntent(
+      customerMessage
+    );
+
+  const wantsInstallation =
+    detectInstallationIntent(
+      customerMessage
+    );
+
+  // =====================================
+  // COMPRA
   // =====================================
 
   if (
-    detectPurchaseIntent(
-      customerMessage
-    ) &&
+    wantsPurchase &&
     memory?.vehicle
   ) {
+
+    // =====================================
+    // COMPRA + DOMICILIO + INSTALACION
+    // =====================================
+
+    if (
+      wantsDelivery &&
+      wantsInstallation
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          installation:
+            true,
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Órale 👌
+
+Perfecto,
+la instalación a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO INSTALACION
+    // =====================================
+
+    if (
+      wantsInstallation
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          installation:
+            true
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO DOMICILIO
+    // =====================================
+
+    if (
+      wantsDelivery
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+El servicio a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO COMPRA
+    // =====================================
 
     conversationMemory.set(
       conversationId,
