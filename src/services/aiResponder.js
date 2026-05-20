@@ -19,6 +19,13 @@ const DB_PATH = path.resolve(
 );
 
 // =====================================
+// MEMORIA SIMPLE
+// =====================================
+
+const conversationMemory =
+  new Map();
+
+// =====================================
 // CARGAR BASE
 // =====================================
 
@@ -27,7 +34,10 @@ async function loadVehicleDatabase() {
   try {
 
     const file =
-      await fs.readFile(DB_PATH, "utf8");
+      await fs.readFile(
+        DB_PATH,
+        "utf8"
+      );
 
     return JSON.parse(file);
 
@@ -42,11 +52,17 @@ async function loadVehicleDatabase() {
 // GUARDAR BASE
 // =====================================
 
-async function saveVehicleDatabase(data) {
+async function saveVehicleDatabase(
+  data
+) {
 
   await fs.writeFile(
     DB_PATH,
-    JSON.stringify(data, null, 2),
+    JSON.stringify(
+      data,
+      null,
+      2
+    ),
     "utf8"
   );
 }
@@ -72,7 +88,7 @@ function detectVehicle(message) {
     /\b([a-z]+)\s+([a-z0-9]+)\s+((19|20)\d{2})\b/i;
 
   const regex4 =
-    /\b(?:para|ocupo|busco|quiero|necesito)\s+(?:un\s+|una\s+)?([a-z]+(?:\s+[a-z0-9]+)?)\s+((19|20)\d{2})\b/i;
+    /\b(?:para|ocupo|busco|quiero|necesito|par)\s+(?:un\s+|una\s+)?([a-z]+(?:\s+[a-z0-9]+)?)\s+((19|20)\d{2})\b/i;
 
   let match =
     cleanMessage.match(regex4);
@@ -118,10 +134,30 @@ function detectVehicle(message) {
 }
 
 // =====================================
+// DETECTAR FOCO
+// =====================================
+
+function detectBulb(message) {
+
+  const match = message.match(
+    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  return match[0]
+    .toUpperCase();
+}
+
+// =====================================
 // SALUDO
 // =====================================
 
-function shouldIncludeGreeting(message) {
+function shouldIncludeGreeting(
+  message
+) {
 
   const text =
     message.toLowerCase();
@@ -136,7 +172,7 @@ function shouldIncludeGreeting(message) {
 }
 
 // =====================================
-// DUAL BEAM
+// FOCOS DUALES
 // =====================================
 
 function isDualBeamBulb(bulb) {
@@ -171,7 +207,7 @@ function extractBulb(text) {
 }
 
 // =====================================
-// SCRAPING SUPERBRIGHTLEDS
+// SCRAPER SUPERBRIGHTLEDS
 // =====================================
 
 async function scrapeSuperBrightLEDs(
@@ -192,9 +228,10 @@ async function scrapeSuperBrightLEDs(
         timeout: 10000
       });
 
-    const $ = cheerio.load(
-      response.data
-    );
+    const $ =
+      cheerio.load(
+        response.data
+      );
 
     const text =
       $("body").text();
@@ -207,9 +244,12 @@ async function scrapeSuperBrightLEDs(
     }
 
     const sameBulb =
-      isDualBeamBulb(bulb);
+      isDualBeamBulb(
+        bulb
+      );
 
     return {
+
       bulb: sameBulb
         ? bulb
         : {
@@ -234,7 +274,7 @@ async function scrapeSuperBrightLEDs(
 }
 
 // =====================================
-// SCRAPING AUTOZONE
+// SCRAPER AUTOZONE
 // =====================================
 
 async function scrapeAutoZone(
@@ -255,9 +295,10 @@ async function scrapeAutoZone(
         timeout: 10000
       });
 
-    const $ = cheerio.load(
-      response.data
-    );
+    const $ =
+      cheerio.load(
+        response.data
+      );
 
     const text =
       $("body").text();
@@ -270,9 +311,12 @@ async function scrapeAutoZone(
     }
 
     const sameBulb =
-      isDualBeamBulb(bulb);
+      isDualBeamBulb(
+        bulb
+      );
 
     return {
+
       bulb: sameBulb
         ? bulb
         : {
@@ -297,7 +341,7 @@ async function scrapeAutoZone(
 }
 
 // =====================================
-// SCRAPING ROCKAUTO
+// SCRAPER ROCKAUTO
 // =====================================
 
 async function scrapeRockAuto(
@@ -318,9 +362,10 @@ async function scrapeRockAuto(
         timeout: 10000
       });
 
-    const $ = cheerio.load(
-      response.data
-    );
+    const $ =
+      cheerio.load(
+        response.data
+      );
 
     const text =
       $("body").text();
@@ -333,9 +378,12 @@ async function scrapeRockAuto(
     }
 
     const sameBulb =
-      isDualBeamBulb(bulb);
+      isDualBeamBulb(
+        bulb
+      );
 
     return {
+
       bulb: sameBulb
         ? bulb
         : {
@@ -371,7 +419,7 @@ async function getVehicleInfo(
     await loadVehicleDatabase();
 
   // =====================================
-  // CACHE
+  // CACHE LOCAL
   // =====================================
 
   if (db[vehicle]) {
@@ -402,13 +450,18 @@ async function getVehicleInfo(
     try {
 
       const result =
-        await scraper(vehicle);
+        await scraper(
+          vehicle
+        );
 
       if (result) {
 
-        db[vehicle] = result;
+        db[vehicle] =
+          result;
 
-        await saveVehicleDatabase(db);
+        await saveVehicleDatabase(
+          db
+        );
 
         console.log(
           "Vehículo guardado localmente"
@@ -424,7 +477,6 @@ async function getVehicleInfo(
       );
 
     }
-
   }
 
   return null;
@@ -435,11 +487,13 @@ async function getVehicleInfo(
 // =====================================
 
 function buildVehicleReply({
+
   greeting,
   includeGreeting,
   vehicle,
   bulb,
   sameBulb
+
 }) {
 
   const formattedVehicle =
@@ -458,7 +512,7 @@ function buildVehicleReply({
       : "";
 
   // =====================================
-  // MISMO FOCO
+  // ALTAS Y BAJAS MISMO FOCO
   // =====================================
 
   if (sameBulb) {
@@ -491,7 +545,7 @@ $100 MXN adicionales
   }
 
   // =====================================
-  // SEPARADOS
+  // ALTAS Y BAJAS SEPARADAS
   // =====================================
 
   return `
@@ -532,9 +586,29 @@ $100 MXN adicionales
 // =====================================
 
 export async function generateBotReply({
+
   customerMessage,
+  customerPhone,
   conversationHistory = []
+
 }) {
+
+  // =====================================
+  // ID CONVERSACION
+  // =====================================
+
+  const conversationId =
+    customerPhone ||
+    "default";
+
+  // =====================================
+  // MEMORIA
+  // =====================================
+
+  const memory =
+    conversationMemory.get(
+      conversationId
+    );
 
   // =====================================
   // SALUDO
@@ -543,12 +617,15 @@ export async function generateBotReply({
   const now = new Date();
 
   const hour = Number(
-    new Intl.DateTimeFormat("es-MX", {
-      hour: "numeric",
-      hour12: false,
-      timeZone:
-        "America/Tijuana"
-    }).format(now)
+    new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        hour: "numeric",
+        hour12: false,
+        timeZone:
+          "America/Tijuana"
+      }
+    ).format(now)
   );
 
   let greeting =
@@ -581,6 +658,96 @@ export async function generateBotReply({
     );
 
   // =====================================
+  // DETECTAR FOCO MANUAL
+  // =====================================
+
+  const manualBulb =
+    detectBulb(
+      customerMessage
+    );
+
+  // =====================================
+  // CLIENTE CORRIGE FOCO
+  // =====================================
+
+  if (
+    manualBulb &&
+    memory?.vehicle
+  ) {
+
+    const sameBulb =
+      isDualBeamBulb(
+        manualBulb
+      );
+
+    const updatedData = {
+
+      bulb: sameBulb
+        ? manualBulb
+        : {
+            high:
+              manualBulb,
+
+            low:
+              manualBulb ===
+              "9005"
+                ? "9006"
+                : manualBulb
+          },
+
+      sameBulb,
+
+      source:
+        "manual"
+    };
+
+    // =====================================
+    // GUARDAR CACHE
+    // =====================================
+
+    const db =
+      await loadVehicleDatabase();
+
+    db[memory.vehicle] =
+      updatedData;
+
+    await saveVehicleDatabase(
+      db
+    );
+
+    // =====================================
+    // ACTUALIZAR MEMORIA
+    // =====================================
+
+    conversationMemory.set(
+      conversationId,
+      {
+        vehicle:
+          memory.vehicle
+      }
+    );
+
+    return buildVehicleReply({
+
+      greeting,
+
+      includeGreeting:
+        shouldIncludeGreeting(
+          customerMessage
+        ),
+
+      vehicle:
+        memory.vehicle,
+
+      bulb:
+        updatedData.bulb,
+
+      sameBulb:
+        updatedData.sameBulb
+    });
+  }
+
+  // =====================================
   // RESPUESTA AUTOMOTRIZ
   // =====================================
 
@@ -592,6 +759,17 @@ export async function generateBotReply({
       );
 
     if (vehicleInfo) {
+
+      // =====================================
+      // GUARDAR MEMORIA
+      // =====================================
+
+      conversationMemory.set(
+        conversationId,
+        {
+          vehicle
+        }
+      );
 
       return buildVehicleReply({
 
@@ -621,88 +799,13 @@ ahorita te confirmo.
   }
 
   // =====================================
-  // FALLBACK OPENAI
+  // FALLBACK SIMPLE
   // =====================================
 
-  const completion =
-    await openai.chat.completions.create({
+  return `
+${greeting}
 
-      model:
-        config.openai.model,
-
-      temperature: 0.1,
-
-      max_tokens: 120,
-
-      messages: [
-        {
-          role: "system",
-          content: `
-Eres el vendedor de De La Torre LED Shop.
-
-SOLO vendes:
-- luces LED delanteras automotrices
-
-NO menciones:
-- tiras LED
-- decoración
-- paneles
-- motos
-
-Hablas como persona real
-de Mexicali.
-
-Mensajes:
-- cortos
-- naturales
-- tipo WhatsApp
-`
-        },
-
-        ...conversationHistory.flatMap(
-          msg => {
-
-            if (
-              msg.direction ===
-              "inbound"
-            ) {
-
-              return [{
-                role: "user",
-                content:
-                  msg.message_text
-              }];
-            }
-
-            if (
-              msg.direction ===
-                "outbound" &&
-              msg.sender_type ===
-                "bot"
-            ) {
-
-              return [{
-                role: "assistant",
-                content:
-                  msg.message_text
-              }];
-            }
-
-            return [];
-          }
-        ),
-
-        {
-          role: "user",
-          content:
-            customerMessage
-        }
-      ]
-    });
-
-  return (
-    completion.choices[0]
-      ?.message?.content?.trim() ||
-    `${greeting} 👋 ¿Cuál es el año y modelo de su vehículo?`
-  );
+¿Cuál es el año y modelo
+de su vehículo?
+`.trim();
 }
