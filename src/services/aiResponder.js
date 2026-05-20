@@ -540,10 +540,18 @@ ${greetingText}[${formattedVehicle}]
 
 🔦Usa ${bulb} para altas y bajas
 
-· COB 2 Caras $250 MXN 6,000 lúmenes ✅ 3 meses de garantía
-· COB 4 Caras $350 MXN 12,000 lúmenes ✅ 3 meses de garantía
-· CSP Premium $500 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
-
+· COB 2 Caras $250 MXN 
+  6,000 lúmenes 
+  ✅ 3 meses de garantía
+  
+· COB 4 Caras $350 MXN 
+  12,000 lúmenes 
+  ✅ 3 meses de garantía
+  
+· CSP Premium $500 MXN 
+  20,000 lúmenes 
+  ✅ 6 meses de garantía
+⭐ (recomendado)
 🔧 Instalación: $100 MXN
 
 📍 De La Torre LED Shop
@@ -571,15 +579,25 @@ ${greetingText}[${formattedVehicle}]
 
 🔦Usa ${bulb.high} para las altas
 
-· COB 2 Caras $200 MXN 6,000 lúmenes ✅ 3 meses de garantía
-· COB 4 Caras $300 MXN 12,000 lúmenes ✅ 3 meses de garantía
-· CSP Premium $450 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
+· COB 2 Caras $200 MXN 6,000 lúmenes 
+✅ 3 meses de garantía
+
+· COB 4 Caras $300 MXN 12,000 lúmenes 
+✅ 3 meses de garantía
+
+· CSP Premium $450 MXN 20,000 lúmenes 
+✅ 6 meses de garantía ⭐ (recomendado)
 
 🔦Usa ${bulb.low} para las bajas
 
-· COB 2 Caras $200 MXN 6,000 lúmenes ✅ 3 meses de garantía
-· COB 4 Caras $300 MXN 12,000 lúmenes ✅ 3 meses de garantía
-· CSP Premium $450 MXN 20,000 lúmenes ✅ 6 meses de garantía ⭐ (recomendado)
+· COB 2 Caras $200 MXN 6,000 lúmenes 
+✅ 3 meses de garantía
+
+· COB 4 Caras $300 MXN 12,000 lúmenes 
+✅ 3 meses de garantía
+
+· CSP Premium $450 MXN 20,000 lúmenes 
+✅ 6 meses de garantía ⭐ (recomendado)
 
 🔧 Instalación: $100 MXN
 
