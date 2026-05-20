@@ -826,8 +826,8 @@ export async function generateBotReply({
 La CSP Premium es la mejor opción,
 da más claridad y dura más.
 
-¿Quiere instalación
-o entrega?
+¿Quiere agregar instalación
+o entrega a domicilio?
 `.trim();
   }
 
