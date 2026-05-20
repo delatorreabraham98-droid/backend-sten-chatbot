@@ -9,7 +9,7 @@ const openai = new OpenAI({
 });
 
 // =====================================
-// BASE LOCAL
+// CACHE LOCAL
 // =====================================
 
 const DB_PATH = path.resolve(
@@ -24,7 +24,7 @@ const conversationMemory =
   new Map();
 
 // =====================================
-// VEHICULOS OEM VERIFICADOS
+// BASE OEM MANUAL
 // =====================================
 
 const knownVehicles = {
@@ -54,7 +54,7 @@ const knownVehicles = {
 };
 
 // =====================================
-// CARGAR CACHE
+// CARGAR DB
 // =====================================
 
 async function loadVehicleDatabase() {
@@ -76,7 +76,7 @@ async function loadVehicleDatabase() {
 }
 
 // =====================================
-// GUARDAR CACHE
+// GUARDAR DB
 // =====================================
 
 async function saveVehicleDatabase(
@@ -95,7 +95,7 @@ async function saveVehicleDatabase(
 }
 
 // =====================================
-// NORMALIZAR VEHICULO
+// NORMALIZAR
 // =====================================
 
 function normalizeVehicleName(
@@ -150,13 +150,11 @@ function normalizeVehicleName(
 
 function detectVehicle(message) {
 
-  const cleanMessage =
-    message
-      .trim()
-      .toLowerCase();
+  const clean =
+    message.toLowerCase();
 
   const yearMatch =
-    cleanMessage.match(
+    clean.match(
       /\b(19|20)\d{2}\b/
     );
 
@@ -165,14 +163,14 @@ function detectVehicle(message) {
       ? yearMatch[0]
       : null;
 
-  const vehicleMatch =
-    cleanMessage.match(
+  const modelMatch =
+    clean.match(
       /\b(camaro|focus|civic|lancer|silverado|sentra|corolla|accord|mustang|ram|altima|jetta|malibu|fusion|escape|sierra|tahoe|cruze)\b/i
     );
 
   const model =
-    vehicleMatch
-      ? vehicleMatch[0]
+    modelMatch
+      ? modelMatch[0]
       : null;
 
   if (
@@ -218,9 +216,10 @@ function detectVehicle(message) {
 
 function detectBulb(message) {
 
-  const match = message.match(
-    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/i
-  );
+  const match =
+    message.match(
+      /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/i
+    );
 
   if (!match) {
     return null;
@@ -231,7 +230,7 @@ function detectBulb(message) {
 }
 
 // =====================================
-// DETECTAR INTENCION DE COMPRA
+// DETECTAR COMPRA
 // =====================================
 
 function detectPurchaseIntent(
@@ -243,12 +242,30 @@ function detectPurchaseIntent(
 
   return (
     text.includes("voy a querer") ||
-    text.includes("me llevo") ||
-    text.includes("quiero las") ||
+    text.includes("quiero") ||
     text.includes("las de 500") ||
-    text.includes("las premium") ||
-    text.includes("las csp") ||
-    text.includes("me interesan")
+    text.includes("$500") ||
+    text.includes("premium") ||
+    text.includes("csp") ||
+    text.includes("me llevo")
+  );
+}
+
+// =====================================
+// DETECTAR DOMICILIO
+// =====================================
+
+function detectDeliveryIntent(
+  message
+) {
+
+  const text =
+    message.toLowerCase();
+
+  return (
+    text.includes("domicilio") ||
+    text.includes("puedes venir") ||
+    text.includes("entrega")
   );
 }
 
@@ -266,48 +283,84 @@ function detectInstallationIntent(
   return (
     text.includes("instalacion") ||
     text.includes("instalar") ||
-    text.includes("puedes venir") ||
-    text.includes("a domicilio") ||
-    text.includes("venir")
+    text.includes("con instalación") ||
+    text.includes("con instalacion")
   );
 }
 
 // =====================================
-// DETECTAR SALUDO
+// DETECTAR RESPUESTA SI
 // =====================================
 
-function shouldIncludeGreeting(
+function detectYes(message) {
+
+  const text =
+    message.toLowerCase()
+      .trim();
+
+  return (
+    text === "si" ||
+    text === "sí" ||
+    text === "simon" ||
+    text === "ok" ||
+    text === "va" ||
+    text === "sale"
+  );
+}
+
+// =====================================
+// DETECTAR COLONIA
+// =====================================
+
+function looksLikeAddress(
   message
 ) {
 
-  const text =
-    message.toLowerCase();
-
   return (
-    text.includes("hola") ||
-    text.includes("buenas") ||
-    text.includes("buenos días") ||
-    text.includes("buenas tardes") ||
-    text.includes("buenas noches")
+    message.length >= 4 &&
+    !detectVehicle(message) &&
+    !detectPurchaseIntent(message)
   );
 }
 
 // =====================================
-// FOCOS DUALES
+// SALUDO
 // =====================================
 
-function isDualBeamBulb(bulb) {
+function getGreeting() {
 
-  const dualBulbs = [
-    "H13",
-    "H4",
-    "9004",
-    "9007"
-  ];
+  const now =
+    new Date();
 
-  return dualBulbs.includes(
-    bulb?.toUpperCase()
+  const hour = Number(
+    new Intl.DateTimeFormat(
+      "es-MX",
+      {
+        hour: "numeric",
+        hour12: false,
+        timeZone:
+          "America/Tijuana"
+      }
+    ).format(now)
   );
+
+  if (
+    hour >= 5 &&
+    hour < 12
+  ) {
+
+    return "Buenos días";
+  }
+
+  if (
+    hour >= 20 ||
+    hour < 5
+  ) {
+
+    return "Buenas noches";
+  }
+
+  return "Buenas tardes";
 }
 
 // =====================================
@@ -345,11 +398,11 @@ async function detectVehicleBulbsAI(
             role: "system",
 
             content: `
-Eres un experto OEM automotriz.
+Eres experto OEM automotriz.
 
-Identifica:
-- foco high beam
-- foco low beam
+Detecta:
+- high beam
+- low beam
 
 SOLO delanteros.
 
@@ -463,30 +516,30 @@ Si NO estás seguro:
 }
 
 // =====================================
-// OBTENER INFO VEHICULO
+// OBTENER INFO
 // =====================================
 
 async function getVehicleInfo(
   vehicle
 ) {
 
-  const normalizedVehicle =
+  const normalized =
     normalizeVehicleName(
       vehicle
     );
 
   // =====================================
-  // BASE OEM
+  // BASE MANUAL
   // =====================================
 
   if (
     knownVehicles[
-      normalizedVehicle
+      normalized
     ]
   ) {
 
     return knownVehicles[
-      normalizedVehicle
+      normalized
     ];
   }
 
@@ -498,12 +551,10 @@ async function getVehicleInfo(
     await loadVehicleDatabase();
 
   if (
-    db[normalizedVehicle]
+    db[normalized]
   ) {
 
-    return db[
-      normalizedVehicle
-    ];
+    return db[normalized];
   }
 
   // =====================================
@@ -512,14 +563,14 @@ async function getVehicleInfo(
 
   const result =
     await detectVehicleBulbsAI(
-      normalizedVehicle
+      normalized
     );
 
   if (!result) {
     return null;
   }
 
-  db[normalizedVehicle] =
+  db[normalized] =
     result;
 
   await saveVehicleDatabase(
@@ -535,8 +586,6 @@ async function getVehicleInfo(
 
 function buildVehicleReply({
 
-  greeting,
-  includeGreeting,
   vehicle,
   bulb,
   sameBulb
@@ -555,11 +604,6 @@ function buildVehicleReply({
       )
       .join(" ");
 
-  const greetingText =
-    includeGreeting
-      ? `${greeting}\n`
-      : "";
-
   // =====================================
   // MISMO FOCO
   // =====================================
@@ -567,7 +611,7 @@ function buildVehicleReply({
   if (sameBulb) {
 
     return `
-${greetingText}[${formattedVehicle}]
+[${formattedVehicle}]
 
 🔦Usa ${bulb} para altas y bajas
 
@@ -607,7 +651,7 @@ $100 MXN adicionales
   // =====================================
 
   return `
-${greetingText}[${formattedVehicle}]
+[${formattedVehicle}]
 
 🔦Usa ${bulb.high} para las altas
 
@@ -658,7 +702,7 @@ $100 MXN adicionales
 }
 
 // =====================================
-// FUNCION PRINCIPAL
+// MAIN
 // =====================================
 
 export async function generateBotReply({
@@ -668,6 +712,9 @@ export async function generateBotReply({
 
 }) {
 
+  const greeting =
+    getGreeting();
+
   const conversationId =
     customerPhone ||
     "default";
@@ -675,48 +722,188 @@ export async function generateBotReply({
   const memory =
     conversationMemory.get(
       conversationId
-    ) || {};
+    ) || {
+
+      stage: "idle"
+    };
 
   // =====================================
-  // SALUDO
+  // PRIORIDAD:
+  // FLUJOS ACTIVOS
   // =====================================
 
-  const now = new Date();
-
-  const hour = Number(
-    new Intl.DateTimeFormat(
-      "es-MX",
-      {
-        hour: "numeric",
-        hour12: false,
-        timeZone:
-          "America/Tijuana"
-      }
-    ).format(now)
-  );
-
-  let greeting =
-    "Buenas tardes";
+  // =====================================
+  // ESPERANDO TIPO ENTREGA
+  // =====================================
 
   if (
-    hour >= 5 &&
-    hour < 12
+    memory.stage ===
+    "awaiting_delivery_type"
   ) {
 
-    greeting =
-      "Buenos días";
+    // =====================================
+    // RESPUESTA SI
+    // =====================================
 
-  } else if (
-    hour >= 20 ||
-    hour < 5
-  ) {
+    if (
+      detectYes(
+        customerMessage
+      )
+    ) {
 
-    greeting =
-      "Buenas noches";
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          deliveryType:
+            "instalacion"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // INSTALACION
+    // =====================================
+
+    if (
+      detectInstallationIntent(
+        customerMessage
+      )
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          deliveryType:
+            "instalacion"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // DOMICILIO
+    // =====================================
+
+    if (
+      detectDeliveryIntent(
+        customerMessage
+      )
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+El servicio a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
   }
 
   // =====================================
-  // VEHICULO
+  // ESPERANDO DIRECCION
+  // =====================================
+
+  if (
+    memory.stage ===
+    "awaiting_address"
+  ) {
+
+    if (
+      looksLikeAddress(
+        customerMessage
+      )
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_schedule",
+          address:
+            customerMessage
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿Le queda hoy
+o mañana?
+`.trim();
+    }
+  }
+
+  // =====================================
+  // ESPERANDO HORARIO
+  // =====================================
+
+  if (
+    memory.stage ===
+    "awaiting_schedule"
+  ) {
+
+    conversationMemory.set(
+      conversationId,
+      {
+        ...memory,
+        stage:
+          "completed",
+        schedule:
+          customerMessage
+      }
+    );
+
+    return `
+Perfecto 👌
+
+Quedó agendada
+su instalación.
+
+En un momento
+le confirmamos horario
+por WhatsApp.
+
+📱 686 471 9077
+`.trim();
+  }
+
+  // =====================================
+  // DETECTAR VEHICULO
   // =====================================
 
   const vehicleData =
@@ -725,7 +912,7 @@ export async function generateBotReply({
     );
 
   // =====================================
-  // FOCO MANUAL
+  // DETECTAR FOCO
   // =====================================
 
   const manualBulb =
@@ -734,7 +921,7 @@ export async function generateBotReply({
     );
 
   // =====================================
-  // CLIENTE CORRIGE FOCO
+  // CORRECCION MANUAL
   // =====================================
 
   if (
@@ -743,7 +930,12 @@ export async function generateBotReply({
   ) {
 
     const sameBulb =
-      isDualBeamBulb(
+      [
+        "H13",
+        "H4",
+        "9004",
+        "9007"
+      ].includes(
         manualBulb
       );
 
@@ -754,38 +946,14 @@ export async function generateBotReply({
         : {
             high:
               manualBulb,
-
             low:
-              manualBulb ===
-              "9005"
-                ? "9006"
-                : manualBulb
+              manualBulb
           },
 
       sameBulb
     };
 
-    const db =
-      await loadVehicleDatabase();
-
-    db[
-      normalizeVehicleName(
-        memory.vehicle
-      )
-    ] = updatedData;
-
-    await saveVehicleDatabase(
-      db
-    );
-
     return buildVehicleReply({
-
-      greeting,
-
-      includeGreeting:
-        shouldIncludeGreeting(
-          customerMessage
-        ),
 
       vehicle:
         memory.vehicle,
@@ -799,7 +967,7 @@ export async function generateBotReply({
   }
 
   // =====================================
-  // INTENCION DE COMPRA
+  // DETECTAR COMPRA
   // =====================================
 
   if (
@@ -814,7 +982,7 @@ export async function generateBotReply({
       {
         ...memory,
         stage:
-          "purchase_confirmed",
+          "awaiting_delivery_type",
         selectedProduct:
           "CSP Premium"
       }
@@ -826,39 +994,8 @@ export async function generateBotReply({
 La CSP Premium es la mejor opción,
 da más claridad y dura más.
 
-¿Quiere agregar instalación
+¿Quiere instalación
 o entrega a domicilio?
-`.trim();
-  }
-
-  // =====================================
-  // INSTALACION / DOMICILIO
-  // =====================================
-
-  if (
-    detectInstallationIntent(
-      customerMessage
-    ) &&
-    memory?.vehicle
-  ) {
-
-    conversationMemory.set(
-      conversationId,
-      {
-        ...memory,
-        stage:
-          "installation"
-      }
-    );
-
-    return `
-Sí 👌
-
-El servicio a domicilio
-tiene costo adicional
-de $100 MXN.
-
-¿En qué colonia se encuentra?
 `.trim();
   }
 
@@ -869,7 +1006,7 @@ de $100 MXN.
   if (vehicleData) {
 
     // =====================================
-    // VEHICULO COMPLETO
+    // COMPLETO
     // =====================================
 
     if (
@@ -897,13 +1034,6 @@ de $100 MXN.
 
         return buildVehicleReply({
 
-          greeting,
-
-          includeGreeting:
-            shouldIncludeGreeting(
-              customerMessage
-            ),
-
           vehicle,
 
           bulb:
@@ -929,7 +1059,9 @@ de $100 MXN.
         {
           ...memory,
           model:
-            vehicleData.model
+            vehicleData.model,
+          stage:
+            "awaiting_year"
         }
       );
 
@@ -969,13 +1101,6 @@ ${greeting}
         );
 
         return buildVehicleReply({
-
-          greeting,
-
-          includeGreeting:
-            shouldIncludeGreeting(
-              customerMessage
-            ),
 
           vehicle,
 
