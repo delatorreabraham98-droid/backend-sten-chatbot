@@ -67,21 +67,9 @@ async function loadVehicleDatabase() {
         "utf8"
       );
 
-    const parsed =
-      JSON.parse(file);
+    return JSON.parse(file);
 
-    console.log(
-      "DB cargada correctamente"
-    );
-
-    return parsed;
-
-  } catch (error) {
-
-    console.log(
-      "Error leyendo DB:",
-      error.message
-    );
+  } catch {
 
     return {};
   }
@@ -95,41 +83,15 @@ async function saveVehicleDatabase(
   data
 ) {
 
-  try {
-
-    console.log(
-      "Guardando vehicleBulbs.json..."
-    );
-
-    await fs.writeFile(
-      DB_PATH,
-      JSON.stringify(
-        data,
-        null,
-        2
-      ),
-      "utf8"
-    );
-
-    console.log(
-      "DB guardada correctamente"
-    );
-
-    console.log(
-      JSON.stringify(
-        data,
-        null,
-        2
-      )
-    );
-
-  } catch (error) {
-
-    console.log(
-      "Error guardando DB:",
-      error.message
-    );
-  }
+  await fs.writeFile(
+    DB_PATH,
+    JSON.stringify(
+      data,
+      null,
+      2
+    ),
+    "utf8"
+  );
 }
 
 // =====================================
@@ -431,11 +393,6 @@ async function detectVehicleBulbsAI(
         vehicle
       );
 
-    console.log(
-      "Consultando OpenAI:",
-      normalizedVehicle
-    );
-
     const completion =
       await openai.chat.completions.create({
 
@@ -512,11 +469,6 @@ Si NO estás seguro:
         ?.content
         ?.trim();
 
-    console.log(
-      "Respuesta OpenAI:",
-      text
-    );
-
     if (!text) {
       return null;
     }
@@ -580,12 +532,7 @@ Si NO estás seguro:
 
     return null;
 
-  } catch (error) {
-
-    console.log(
-      "Error OpenAI:",
-      error.message
-    );
+  } catch {
 
     return null;
   }
@@ -604,13 +551,8 @@ async function getVehicleInfo(
       vehicle
     );
 
-  console.log(
-    "Buscando vehículo:",
-    normalized
-  );
-
   // =====================================
-  // BASE OEM MANUAL
+  // BASE MANUAL
   // =====================================
 
   if (
@@ -619,17 +561,13 @@ async function getVehicleInfo(
     ]
   ) {
 
-    console.log(
-      "Vehículo encontrado en base OEM"
-    );
-
     return knownVehicles[
       normalized
     ];
   }
 
   // =====================================
-  // CACHE LOCAL
+  // CACHE
   // =====================================
 
   const db =
@@ -638,10 +576,6 @@ async function getVehicleInfo(
   if (
     db[normalized]
   ) {
-
-    console.log(
-      "Vehículo encontrado en cache"
-    );
 
     return db[normalized];
   }
@@ -656,11 +590,6 @@ async function getVehicleInfo(
     );
 
   if (!result) {
-
-    console.log(
-      "No se encontró información"
-    );
-
     return null;
   }
 
@@ -821,9 +750,230 @@ export async function generateBotReply({
     conversationMemory.get(
       conversationId
     ) || {
-
       stage: "idle"
     };
+
+  // =====================================
+  // ESPERANDO DIRECCION
+  // =====================================
+
+  if (
+    memory.stage ===
+    "awaiting_address"
+  ) {
+
+    if (
+      looksLikeAddress(
+        customerMessage
+      )
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_schedule",
+          address:
+            customerMessage
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿Le queda hoy
+o mañana?
+`.trim();
+    }
+  }
+
+  // =====================================
+  // ESPERANDO HORARIO
+  // =====================================
+
+  if (
+    memory.stage ===
+    "awaiting_schedule"
+  ) {
+
+    conversationMemory.set(
+      conversationId,
+      {
+        ...memory,
+        stage:
+          "completed",
+        schedule:
+          customerMessage
+      }
+    );
+
+    return `
+Perfecto 👌
+
+Quedó agendada
+su instalación.
+
+En un momento
+le confirmamos horario
+por WhatsApp.
+
+📱 686 471 9077
+`.trim();
+  }
+
+  // =====================================
+  // INTENCIONES
+  // =====================================
+
+  const wantsPurchase =
+    detectPurchaseIntent(
+      customerMessage
+    );
+
+  const wantsDelivery =
+    detectDeliveryIntent(
+      customerMessage
+    );
+
+  const wantsInstallation =
+    detectInstallationIntent(
+      customerMessage
+    );
+
+  // =====================================
+  // COMPRA
+  // =====================================
+
+  if (
+    wantsPurchase &&
+    memory?.vehicle
+  ) {
+
+    // =====================================
+    // COMPRA + DOMICILIO + INSTALACION
+    // =====================================
+
+    if (
+      wantsDelivery &&
+      wantsInstallation
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          installation:
+            true,
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Órale 👌
+
+Perfecto,
+la instalación a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO INSTALACION
+    // =====================================
+
+    if (
+      wantsInstallation
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          installation:
+            true
+        }
+      );
+
+      return `
+Perfecto 👌
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO DOMICILIO
+    // =====================================
+
+    if (
+      wantsDelivery
+    ) {
+
+      conversationMemory.set(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_address",
+          selectedProduct:
+            "CSP Premium",
+          deliveryType:
+            "domicilio"
+        }
+      );
+
+      return `
+Perfecto 👌
+
+El servicio a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia
+se encuentra?
+`.trim();
+    }
+
+    // =====================================
+    // SOLO COMPRA
+    // =====================================
+
+    conversationMemory.set(
+      conversationId,
+      {
+        ...memory,
+        stage:
+          "awaiting_delivery_type",
+        selectedProduct:
+          "CSP Premium"
+      }
+    );
+
+    return `
+Órale 👌
+
+La CSP Premium es la mejor opción,
+da más claridad y dura más.
+
+¿Quiere instalación
+o entrega a domicilio?
+`.trim();
+  }
 
   // =====================================
   // DETECTAR VEHICULO
