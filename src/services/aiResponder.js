@@ -188,7 +188,66 @@ function isDualBeamBulb(bulb) {
 }
 
 // =====================================
-// CONSULTAR OPENAI
+// NORMALIZAR MARCAS
+// =====================================
+
+function normalizeVehicleName(
+  vehicle
+) {
+
+  let normalized =
+    vehicle;
+
+  if (
+    vehicle.includes("lancer") &&
+    !vehicle.includes("mitsubishi")
+  ) {
+
+    normalized =
+      `mitsubishi ${vehicle}`;
+  }
+
+  if (
+    vehicle.includes("civic") &&
+    !vehicle.includes("honda")
+  ) {
+
+    normalized =
+      `honda ${vehicle}`;
+  }
+
+  if (
+    vehicle.includes("camaro") &&
+    !vehicle.includes("chevrolet")
+  ) {
+
+    normalized =
+      `chevrolet ${vehicle}`;
+  }
+
+  if (
+    vehicle.includes("focus") &&
+    !vehicle.includes("ford")
+  ) {
+
+    normalized =
+      `ford ${vehicle}`;
+  }
+
+  if (
+    vehicle.includes("silverado") &&
+    !vehicle.includes("chevrolet")
+  ) {
+
+    normalized =
+      `chevrolet ${vehicle}`;
+  }
+
+  return normalized;
+}
+
+// =====================================
+// DETECTAR FOCO CON OPENAI
 // =====================================
 
 async function detectVehicleBulbsAI(
@@ -197,29 +256,45 @@ async function detectVehicleBulbsAI(
 
   try {
 
+    const normalizedVehicle =
+      normalizeVehicleName(
+        vehicle
+      );
+
     const completion =
       await openai.chat.completions.create({
 
         model:
           config.openai.model,
 
-        temperature: 0.1,
+        temperature: 0,
 
-        max_tokens: 80,
+        max_tokens: 120,
+
+        response_format: {
+          type: "json_object"
+        },
 
         messages: [
+
           {
             role: "system",
+
             content: `
-Eres un experto automotriz.
+Eres un experto automotriz OEM especializado en compatibilidad de focos delanteros.
 
-Tu tarea es identificar:
+Tu tarea es identificar SOLAMENTE:
 
-1. El tipo de foco delantero
-2. Si usa:
-- altas y bajas en el mismo foco
-o
-- focos separados
+- high beam headlight bulb
+- low beam headlight bulb
+
+NO debes identificar:
+- niebla
+- DRL
+- interior
+- stop
+- reversa
+- cuartos
 
 IMPORTANTE:
 
@@ -228,16 +303,17 @@ H4
 9004
 9007
 
-normalmente usan:
+significan:
 altas y bajas en el mismo foco.
 
-Responde SOLO JSON.
+Debes responder SOLO JSON.
 
 Formato dual:
 
 {
   "sameBulb": true,
-  "bulb": "H13"
+  "bulb": "9007",
+  "confidence": "high"
 }
 
 Formato separado:
@@ -245,17 +321,29 @@ Formato separado:
 {
   "sameBulb": false,
   "high": "9005",
-  "low": "9006"
+  "low": "9006",
+  "confidence": "high"
 }
 
-NO agregues texto extra.
+Si NO estás seguro:
+
+{
+  "confidence": "low"
+}
+
+REGLAS:
+- SOLO responde high confidence
+- NO inventes
+- NO adivines
+- Prioriza OEM fitment
+- Usa información OEM real
 `
           },
 
           {
             role: "user",
             content:
-              vehicle
+              normalizedVehicle
           }
         ]
       });
@@ -275,7 +363,19 @@ NO agregues texto extra.
       JSON.parse(text);
 
     // =====================================
-    // DUAL
+    // LOW CONFIDENCE
+    // =====================================
+
+    if (
+      parsed.confidence !==
+      "high"
+    ) {
+
+      return null;
+    }
+
+    // =====================================
+    // MISMO FOCO
     // =====================================
 
     if (
@@ -297,11 +397,11 @@ NO agregues texto extra.
     }
 
     // =====================================
-    // SEPARADO
+    // SEPARADOS
     // =====================================
 
     if (
-      !parsed.sameBulb &&
+      parsed.sameBulb === false &&
       parsed.high &&
       parsed.low
     ) {
@@ -336,7 +436,6 @@ NO agregues texto extra.
     );
 
     return null;
-
   }
 }
 
@@ -352,7 +451,7 @@ async function getVehicleInfo(
     await loadVehicleDatabase();
 
   // =====================================
-  // CACHE LOCAL
+  // CACHE
   // =====================================
 
   if (db[vehicle]) {
@@ -414,7 +513,9 @@ function buildVehicleReply({
 }) {
 
   const formattedVehicle =
-    vehicle
+    normalizeVehicleName(
+      vehicle
+    )
       .split(" ")
       .map(word =>
         word.charAt(0)
@@ -583,7 +684,7 @@ export async function generateBotReply({
     );
 
   // =====================================
-  // CLIENTE CORRIGE FOCO
+  // CORRECCION MANUAL
   // =====================================
 
   if (
@@ -617,6 +718,10 @@ export async function generateBotReply({
         "manual"
     };
 
+    // =====================================
+    // GUARDAR CACHE
+    // =====================================
+
     const db =
       await loadVehicleDatabase();
 
@@ -648,7 +753,7 @@ export async function generateBotReply({
   }
 
   // =====================================
-  // DETECTAR VEHICULO
+  // VEHICULO DETECTADO
   // =====================================
 
   if (vehicle) {
