@@ -17,49 +17,32 @@ const DB_PATH = path.resolve(
 );
 
 // =====================================
-// MEMORIA SIMPLE
+// MEMORIA CONVERSACIONAL
 // =====================================
 
 const conversationMemory =
   new Map();
 
 // =====================================
-// BASE OEM MANUAL
+// VEHICULOS OEM VERIFICADOS
 // =====================================
 
 const knownVehicles = {
-
-  // =====================================
-  // FORD
-  // =====================================
 
   "ford focus 2002": {
     bulb: "H4",
     sameBulb: true
   },
 
-  "ford focus 2001": {
-    bulb: "H4",
-    sameBulb: true
-  },
-
-  "ford focus 2003": {
-    bulb: "H4",
-    sameBulb: true
-  },
-
-  // =====================================
-  // MITSUBISHI
-  // =====================================
-
   "mitsubishi lancer 2003": {
     bulb: "9007",
     sameBulb: true
   },
 
-  // =====================================
-  // HONDA
-  // =====================================
+  "chevrolet camaro 2010": {
+    bulb: "H13",
+    sameBulb: true
+  },
 
   "honda civic 2010": {
     bulb: {
@@ -67,20 +50,11 @@ const knownVehicles = {
       low: "9006"
     },
     sameBulb: false
-  },
-
-  // =====================================
-  // CHEVROLET
-  // =====================================
-
-  "chevrolet camaro 2010": {
-    bulb: "H13",
-    sameBulb: true
   }
 };
 
 // =====================================
-// CARGAR BASE
+// CARGAR CACHE
 // =====================================
 
 async function loadVehicleDatabase() {
@@ -102,7 +76,7 @@ async function loadVehicleDatabase() {
 }
 
 // =====================================
-// GUARDAR BASE
+// GUARDAR CACHE
 // =====================================
 
 async function saveVehicleDatabase(
@@ -117,132 +91,6 @@ async function saveVehicleDatabase(
       2
     ),
     "utf8"
-  );
-}
-
-// =====================================
-// DETECTAR VEHICULO
-// =====================================
-
-function detectVehicle(message) {
-
-  const cleanMessage =
-    message
-      .trim()
-      .toLowerCase();
-
-  // =====================================
-  // AÑO
-  // =====================================
-
-  const yearMatch =
-    cleanMessage.match(
-      /\b(19|20)\d{2}\b/
-    );
-
-  const year =
-    yearMatch
-      ? yearMatch[0]
-      : null;
-
-  // =====================================
-  // MODELO
-  // =====================================
-
-  const vehicleMatch =
-    cleanMessage.match(
-      /\b(camaro|focus|civic|lancer|silverado|sentra|corolla|accord|mustang|ram|altima|jetta|malibu|fusion|escape|sierra|tahoe|cruze)\b/i
-    );
-
-  const model =
-    vehicleMatch
-      ? vehicleMatch[0]
-      : null;
-
-  // =====================================
-  // COMPLETO
-  // =====================================
-
-  if (
-    model &&
-    year
-  ) {
-
-    return {
-      complete: true,
-      vehicle:
-        `${model} ${year}`
-    };
-  }
-
-  // =====================================
-  // SOLO MODELO
-  // =====================================
-
-  if (
-    model &&
-    !year
-  ) {
-
-    return {
-      complete: false,
-      model
-    };
-  }
-
-  // =====================================
-  // SOLO AÑO
-  // =====================================
-
-  if (
-    year &&
-    !model
-  ) {
-
-    return {
-      complete: false,
-      year
-    };
-  }
-
-  return null;
-}
-
-// =====================================
-// DETECTAR FOCO MANUAL
-// =====================================
-
-function detectBulb(message) {
-
-  const match = message.match(
-    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/i
-  );
-
-  if (!match) {
-    return null;
-  }
-
-  return match[0]
-    .toUpperCase();
-}
-
-// =====================================
-// SALUDO
-// =====================================
-
-function shouldIncludeGreeting(
-  message
-) {
-
-  const text =
-    message.toLowerCase();
-
-  return (
-    text.includes("hola") ||
-    text.includes("buenas") ||
-    text.includes("buenos días") ||
-    text.includes("buenas tardes") ||
-    text.includes("buenas noches")
   );
 }
 
@@ -294,6 +142,154 @@ function normalizeVehicleName(
   }
 
   return normalized;
+}
+
+// =====================================
+// DETECTAR VEHICULO
+// =====================================
+
+function detectVehicle(message) {
+
+  const cleanMessage =
+    message
+      .trim()
+      .toLowerCase();
+
+  const yearMatch =
+    cleanMessage.match(
+      /\b(19|20)\d{2}\b/
+    );
+
+  const year =
+    yearMatch
+      ? yearMatch[0]
+      : null;
+
+  const vehicleMatch =
+    cleanMessage.match(
+      /\b(camaro|focus|civic|lancer|silverado|sentra|corolla|accord|mustang|ram|altima|jetta|malibu|fusion|escape|sierra|tahoe|cruze)\b/i
+    );
+
+  const model =
+    vehicleMatch
+      ? vehicleMatch[0]
+      : null;
+
+  if (
+    model &&
+    year
+  ) {
+
+    return {
+      complete: true,
+      vehicle:
+        `${model} ${year}`
+    };
+  }
+
+  if (
+    model &&
+    !year
+  ) {
+
+    return {
+      complete: false,
+      model
+    };
+  }
+
+  if (
+    year &&
+    !model
+  ) {
+
+    return {
+      complete: false,
+      year
+    };
+  }
+
+  return null;
+}
+
+// =====================================
+// DETECTAR FOCO
+// =====================================
+
+function detectBulb(message) {
+
+  const match = message.match(
+    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/i
+  );
+
+  if (!match) {
+    return null;
+  }
+
+  return match[0]
+    .toUpperCase();
+}
+
+// =====================================
+// DETECTAR INTENCION DE COMPRA
+// =====================================
+
+function detectPurchaseIntent(
+  message
+) {
+
+  const text =
+    message.toLowerCase();
+
+  return (
+    text.includes("voy a querer") ||
+    text.includes("me llevo") ||
+    text.includes("quiero las") ||
+    text.includes("las de 500") ||
+    text.includes("las premium") ||
+    text.includes("las csp") ||
+    text.includes("me interesan")
+  );
+}
+
+// =====================================
+// DETECTAR INSTALACION
+// =====================================
+
+function detectInstallationIntent(
+  message
+) {
+
+  const text =
+    message.toLowerCase();
+
+  return (
+    text.includes("instalacion") ||
+    text.includes("instalar") ||
+    text.includes("puedes venir") ||
+    text.includes("a domicilio") ||
+    text.includes("venir")
+  );
+}
+
+// =====================================
+// DETECTAR SALUDO
+// =====================================
+
+function shouldIncludeGreeting(
+  message
+) {
+
+  const text =
+    message.toLowerCase();
+
+  return (
+    text.includes("hola") ||
+    text.includes("buenas") ||
+    text.includes("buenos días") ||
+    text.includes("buenas tardes") ||
+    text.includes("buenas noches")
+  );
 }
 
 // =====================================
@@ -351,55 +347,42 @@ async function detectVehicleBulbsAI(
             content: `
 Eres un experto OEM automotriz.
 
-Tu tarea es identificar:
+Identifica:
 - foco high beam
 - foco low beam
 
-SOLO focos delanteros.
-
-NO identifiques:
-- niebla
-- reversa
-- stop
-- DRL
-- interior
-
-IMPORTANTE:
+SOLO delanteros.
 
 H13
 H4
 9004
 9007
 
-significan:
+usan:
 altas y bajas en el mismo foco.
 
-Responde SOLO JSON.
-
-Formato dual:
+JSON dual:
 
 {
-  "sameBulb": true,
-  "bulb": "H4",
-  "confidence": "high"
+ "sameBulb": true,
+ "bulb": "H4",
+ "confidence": "high"
 }
 
-Formato separado:
+JSON separado:
 
 {
-  "sameBulb": false,
-  "high": "9005",
-  "low": "9006",
-  "confidence": "high"
+ "sameBulb": false,
+ "high": "9005",
+ "low": "9006",
+ "confidence": "high"
 }
 
 Si NO estás seguro:
 
 {
-  "confidence": "low"
+ "confidence": "low"
 }
-
-NO inventes.
 `
           },
 
@@ -433,10 +416,6 @@ NO inventes.
       return null;
     }
 
-    // =====================================
-    // MISMO FOCO
-    // =====================================
-
     if (
       parsed.sameBulb &&
       parsed.bulb
@@ -448,16 +427,9 @@ NO inventes.
           parsed.bulb
             .toUpperCase(),
 
-        sameBulb: true,
-
-        source:
-          "openai"
+        sameBulb: true
       };
     }
-
-    // =====================================
-    // SEPARADOS
-    // =====================================
 
     if (
       parsed.sameBulb === false &&
@@ -478,10 +450,7 @@ NO inventes.
               .toUpperCase()
         },
 
-        sameBulb: false,
-
-        source:
-          "openai"
+        sameBulb: false
       };
     }
 
@@ -494,7 +463,7 @@ NO inventes.
 }
 
 // =====================================
-// OBTENER INFO
+// OBTENER INFO VEHICULO
 // =====================================
 
 async function getVehicleInfo(
@@ -507,7 +476,7 @@ async function getVehicleInfo(
     );
 
   // =====================================
-  // BASE MANUAL OEM
+  // BASE OEM
   // =====================================
 
   if (
@@ -516,17 +485,13 @@ async function getVehicleInfo(
     ]
   ) {
 
-    console.log(
-      "Vehículo encontrado en base OEM"
-    );
-
     return knownVehicles[
       normalizedVehicle
     ];
   }
 
   // =====================================
-  // CACHE LOCAL
+  // CACHE
   // =====================================
 
   const db =
@@ -536,18 +501,10 @@ async function getVehicleInfo(
     db[normalizedVehicle]
   ) {
 
-    console.log(
-      "Vehículo encontrado localmente"
-    );
-
     return db[
       normalizedVehicle
     ];
   }
-
-  console.log(
-    "Consultando OpenAI..."
-  );
 
   // =====================================
   // OPENAI
@@ -562,10 +519,6 @@ async function getVehicleInfo(
     return null;
   }
 
-  // =====================================
-  // GUARDAR CACHE
-  // =====================================
-
   db[normalizedVehicle] =
     result;
 
@@ -573,15 +526,11 @@ async function getVehicleInfo(
     db
   );
 
-  console.log(
-    "Vehículo guardado localmente"
-  );
-
   return result;
 }
 
 // =====================================
-// RESPUESTA FINAL
+// RESPUESTA VEHICULO
 // =====================================
 
 function buildVehicleReply({
@@ -726,7 +675,7 @@ export async function generateBotReply({
   const memory =
     conversationMemory.get(
       conversationId
-    );
+    ) || {};
 
   // =====================================
   // SALUDO
@@ -767,7 +716,7 @@ export async function generateBotReply({
   }
 
   // =====================================
-  // DETECTAR VEHICULO
+  // VEHICULO
   // =====================================
 
   const vehicleData =
@@ -776,7 +725,7 @@ export async function generateBotReply({
     );
 
   // =====================================
-  // DETECTAR FOCO
+  // FOCO MANUAL
   // =====================================
 
   const manualBulb =
@@ -785,7 +734,7 @@ export async function generateBotReply({
     );
 
   // =====================================
-  // CORRECCION MANUAL
+  // CLIENTE CORRIGE FOCO
   // =====================================
 
   if (
@@ -813,10 +762,7 @@ export async function generateBotReply({
                 : manualBulb
           },
 
-      sameBulb,
-
-      source:
-        "manual"
+      sameBulb
     };
 
     const db =
@@ -853,13 +799,77 @@ export async function generateBotReply({
   }
 
   // =====================================
+  // INTENCION DE COMPRA
+  // =====================================
+
+  if (
+    detectPurchaseIntent(
+      customerMessage
+    ) &&
+    memory?.vehicle
+  ) {
+
+    conversationMemory.set(
+      conversationId,
+      {
+        ...memory,
+        stage:
+          "purchase_confirmed",
+        selectedProduct:
+          "CSP Premium"
+      }
+    );
+
+    return `
+Órale 👌
+
+La CSP Premium es la mejor opción,
+da más claridad y dura más.
+
+¿Quiere instalación
+o entrega?
+`.trim();
+  }
+
+  // =====================================
+  // INSTALACION / DOMICILIO
+  // =====================================
+
+  if (
+    detectInstallationIntent(
+      customerMessage
+    ) &&
+    memory?.vehicle
+  ) {
+
+    conversationMemory.set(
+      conversationId,
+      {
+        ...memory,
+        stage:
+          "installation"
+      }
+    );
+
+    return `
+Sí 👌
+
+El servicio a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia se encuentra?
+`.trim();
+  }
+
+  // =====================================
   // VEHICULO
   // =====================================
 
   if (vehicleData) {
 
     // =====================================
-    // COMPLETO
+    // VEHICULO COMPLETO
     // =====================================
 
     if (
@@ -880,9 +890,8 @@ export async function generateBotReply({
           conversationId,
           {
             vehicle,
-            model:
-              vehicle
-                .split(" ")[0]
+            stage:
+              "quoted"
           }
         );
 
@@ -953,7 +962,9 @@ ${greeting}
         conversationMemory.set(
           conversationId,
           {
-            vehicle
+            vehicle,
+            stage:
+              "quoted"
           }
         );
 
