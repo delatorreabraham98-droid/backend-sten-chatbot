@@ -24,6 +24,62 @@ const conversationMemory =
   new Map();
 
 // =====================================
+// BASE OEM MANUAL
+// =====================================
+
+const knownVehicles = {
+
+  // =====================================
+  // FORD
+  // =====================================
+
+  "ford focus 2002": {
+    bulb: "H4",
+    sameBulb: true
+  },
+
+  "ford focus 2001": {
+    bulb: "H4",
+    sameBulb: true
+  },
+
+  "ford focus 2003": {
+    bulb: "H4",
+    sameBulb: true
+  },
+
+  // =====================================
+  // MITSUBISHI
+  // =====================================
+
+  "mitsubishi lancer 2003": {
+    bulb: "9007",
+    sameBulb: true
+  },
+
+  // =====================================
+  // HONDA
+  // =====================================
+
+  "honda civic 2010": {
+    bulb: {
+      high: "9005",
+      low: "9006"
+    },
+    sameBulb: false
+  },
+
+  // =====================================
+  // CHEVROLET
+  // =====================================
+
+  "chevrolet camaro 2010": {
+    bulb: "H13",
+    sameBulb: true
+  }
+};
+
+// =====================================
 // CARGAR BASE
 // =====================================
 
@@ -42,7 +98,6 @@ async function loadVehicleDatabase() {
   } catch {
 
     return {};
-
   }
 }
 
@@ -76,56 +131,78 @@ function detectVehicle(message) {
       .trim()
       .toLowerCase();
 
-  const regex1 =
-    /\b([a-z]+)\s+((19|20)\d{2})\b/i;
+  // =====================================
+  // AÑO
+  // =====================================
 
-  const regex2 =
-    /\b((19|20)\d{2})\s+([a-z]+)\b/i;
+  const yearMatch =
+    cleanMessage.match(
+      /\b(19|20)\d{2}\b/
+    );
 
-  const regex3 =
-    /\b([a-z]+)\s+([a-z0-9]+)\s+((19|20)\d{2})\b/i;
+  const year =
+    yearMatch
+      ? yearMatch[0]
+      : null;
 
-  const regex4 =
-    /\b(?:para|ocupo|busco|quiero|necesito|par)\s+(?:un\s+|una\s+)?([a-z]+(?:\s+[a-z0-9]+)?)\s+((19|20)\d{2})\b/i;
+  // =====================================
+  // MODELO
+  // =====================================
 
-  let match =
-    cleanMessage.match(regex4);
+  const vehicleMatch =
+    cleanMessage.match(
+      /\b(camaro|focus|civic|lancer|silverado|sentra|corolla|accord|mustang|ram|altima|jetta|malibu|fusion|escape|sierra|tahoe|cruze)\b/i
+    );
 
-  if (match) {
+  const model =
+    vehicleMatch
+      ? vehicleMatch[0]
+      : null;
 
-    return `${match[1]} ${match[2]}`
-      .trim()
-      .toLowerCase();
+  // =====================================
+  // COMPLETO
+  // =====================================
+
+  if (
+    model &&
+    year
+  ) {
+
+    return {
+      complete: true,
+      vehicle:
+        `${model} ${year}`
+    };
   }
 
-  match =
-    cleanMessage.match(regex3);
+  // =====================================
+  // SOLO MODELO
+  // =====================================
 
-  if (match) {
+  if (
+    model &&
+    !year
+  ) {
 
-    return match[0]
-      .trim()
-      .toLowerCase();
+    return {
+      complete: false,
+      model
+    };
   }
 
-  match =
-    cleanMessage.match(regex1);
+  // =====================================
+  // SOLO AÑO
+  // =====================================
 
-  if (match) {
+  if (
+    year &&
+    !model
+  ) {
 
-    return match[0]
-      .trim()
-      .toLowerCase();
-  }
-
-  match =
-    cleanMessage.match(regex2);
-
-  if (match) {
-
-    return match[0]
-      .trim()
-      .toLowerCase();
+    return {
+      complete: false,
+      year
+    };
   }
 
   return null;
@@ -170,6 +247,56 @@ function shouldIncludeGreeting(
 }
 
 // =====================================
+// NORMALIZAR VEHICULO
+// =====================================
+
+function normalizeVehicleName(
+  vehicle
+) {
+
+  let normalized =
+    vehicle.toLowerCase();
+
+  if (
+    normalized.includes("focus") &&
+    !normalized.includes("ford")
+  ) {
+
+    normalized =
+      `ford ${normalized}`;
+  }
+
+  if (
+    normalized.includes("lancer") &&
+    !normalized.includes("mitsubishi")
+  ) {
+
+    normalized =
+      `mitsubishi ${normalized}`;
+  }
+
+  if (
+    normalized.includes("camaro") &&
+    !normalized.includes("chevrolet")
+  ) {
+
+    normalized =
+      `chevrolet ${normalized}`;
+  }
+
+  if (
+    normalized.includes("civic") &&
+    !normalized.includes("honda")
+  ) {
+
+    normalized =
+      `honda ${normalized}`;
+  }
+
+  return normalized;
+}
+
+// =====================================
 // FOCOS DUALES
 // =====================================
 
@@ -188,66 +315,7 @@ function isDualBeamBulb(bulb) {
 }
 
 // =====================================
-// NORMALIZAR MARCAS
-// =====================================
-
-function normalizeVehicleName(
-  vehicle
-) {
-
-  let normalized =
-    vehicle;
-
-  if (
-    vehicle.includes("lancer") &&
-    !vehicle.includes("mitsubishi")
-  ) {
-
-    normalized =
-      `mitsubishi ${vehicle}`;
-  }
-
-  if (
-    vehicle.includes("civic") &&
-    !vehicle.includes("honda")
-  ) {
-
-    normalized =
-      `honda ${vehicle}`;
-  }
-
-  if (
-    vehicle.includes("camaro") &&
-    !vehicle.includes("chevrolet")
-  ) {
-
-    normalized =
-      `chevrolet ${vehicle}`;
-  }
-
-  if (
-    vehicle.includes("focus") &&
-    !vehicle.includes("ford")
-  ) {
-
-    normalized =
-      `ford ${vehicle}`;
-  }
-
-  if (
-    vehicle.includes("silverado") &&
-    !vehicle.includes("chevrolet")
-  ) {
-
-    normalized =
-      `chevrolet ${vehicle}`;
-  }
-
-  return normalized;
-}
-
-// =====================================
-// DETECTAR FOCO CON OPENAI
+// OPENAI DETECCION
 // =====================================
 
 async function detectVehicleBulbsAI(
@@ -281,20 +349,20 @@ async function detectVehicleBulbsAI(
             role: "system",
 
             content: `
-Eres un experto automotriz OEM especializado en compatibilidad de focos delanteros.
+Eres un experto OEM automotriz.
 
-Tu tarea es identificar SOLAMENTE:
+Tu tarea es identificar:
+- foco high beam
+- foco low beam
 
-- high beam headlight bulb
-- low beam headlight bulb
+SOLO focos delanteros.
 
-NO debes identificar:
+NO identifiques:
 - niebla
+- reversa
+- stop
 - DRL
 - interior
-- stop
-- reversa
-- cuartos
 
 IMPORTANTE:
 
@@ -306,13 +374,13 @@ H4
 significan:
 altas y bajas en el mismo foco.
 
-Debes responder SOLO JSON.
+Responde SOLO JSON.
 
 Formato dual:
 
 {
   "sameBulb": true,
-  "bulb": "9007",
+  "bulb": "H4",
   "confidence": "high"
 }
 
@@ -331,12 +399,7 @@ Si NO estás seguro:
   "confidence": "low"
 }
 
-REGLAS:
-- SOLO responde high confidence
-- NO inventes
-- NO adivines
-- Prioriza OEM fitment
-- Usa información OEM real
+NO inventes.
 `
           },
 
@@ -361,10 +424,6 @@ REGLAS:
 
     const parsed =
       JSON.parse(text);
-
-    // =====================================
-    // LOW CONFIDENCE
-    // =====================================
 
     if (
       parsed.confidence !==
@@ -428,39 +487,62 @@ REGLAS:
 
     return null;
 
-  } catch (error) {
-
-    console.log(
-      "OpenAI bulb detection error:",
-      error.message
-    );
+  } catch {
 
     return null;
   }
 }
 
 // =====================================
-// OBTENER INFO VEHICULO
+// OBTENER INFO
 // =====================================
 
 async function getVehicleInfo(
   vehicle
 ) {
 
+  const normalizedVehicle =
+    normalizeVehicleName(
+      vehicle
+    );
+
+  // =====================================
+  // BASE MANUAL OEM
+  // =====================================
+
+  if (
+    knownVehicles[
+      normalizedVehicle
+    ]
+  ) {
+
+    console.log(
+      "Vehículo encontrado en base OEM"
+    );
+
+    return knownVehicles[
+      normalizedVehicle
+    ];
+  }
+
+  // =====================================
+  // CACHE LOCAL
+  // =====================================
+
   const db =
     await loadVehicleDatabase();
 
-  // =====================================
-  // CACHE
-  // =====================================
-
-  if (db[vehicle]) {
+  if (
+    db[normalizedVehicle]
+  ) {
 
     console.log(
       "Vehículo encontrado localmente"
     );
 
-    return db[vehicle];
+    return db[
+      normalizedVehicle
+    ];
   }
 
   console.log(
@@ -468,12 +550,12 @@ async function getVehicleInfo(
   );
 
   // =====================================
-  // OPENAI DETECCION
+  // OPENAI
   // =====================================
 
   const result =
     await detectVehicleBulbsAI(
-      vehicle
+      normalizedVehicle
     );
 
   if (!result) {
@@ -484,7 +566,7 @@ async function getVehicleInfo(
   // GUARDAR CACHE
   // =====================================
 
-  db[vehicle] =
+  db[normalizedVehicle] =
     result;
 
   await saveVehicleDatabase(
@@ -540,18 +622,19 @@ ${greetingText}[${formattedVehicle}]
 
 🔦Usa ${bulb} para altas y bajas
 
-· COB 2 Caras $250 MXN 
-  6,000 lúmenes 
+· COB 2 Caras $250 MXN
+  6,000 lúmenes
   ✅ 3 meses de garantía
-  
-· COB 4 Caras $350 MXN 
-  12,000 lúmenes 
+
+· COB 4 Caras $350 MXN
+  12,000 lúmenes
   ✅ 3 meses de garantía
-  
-· CSP Premium $500 MXN 
-  20,000 lúmenes 
+
+· CSP Premium $500 MXN
+  20,000 lúmenes
   ✅ 6 meses de garantía
 ⭐ (recomendado)
+
 🔧 Instalación: $100 MXN
 
 📍 De La Torre LED Shop
@@ -579,25 +662,33 @@ ${greetingText}[${formattedVehicle}]
 
 🔦Usa ${bulb.high} para las altas
 
-· COB 2 Caras $200 MXN 6,000 lúmenes 
-✅ 3 meses de garantía
+· COB 2 Caras $200 MXN
+  6,000 lúmenes
+  ✅ 3 meses de garantía
 
-· COB 4 Caras $300 MXN 12,000 lúmenes 
-✅ 3 meses de garantía
+· COB 4 Caras $300 MXN
+  12,000 lúmenes
+  ✅ 3 meses de garantía
 
-· CSP Premium $450 MXN 20,000 lúmenes 
-✅ 6 meses de garantía ⭐ (recomendado)
+· CSP Premium $450 MXN
+  20,000 lúmenes
+  ✅ 6 meses de garantía
+⭐ (recomendado)
 
 🔦Usa ${bulb.low} para las bajas
 
-· COB 2 Caras $200 MXN 6,000 lúmenes 
-✅ 3 meses de garantía
+· COB 2 Caras $200 MXN
+  6,000 lúmenes
+  ✅ 3 meses de garantía
 
-· COB 4 Caras $300 MXN 12,000 lúmenes 
-✅ 3 meses de garantía
+· COB 4 Caras $300 MXN
+  12,000 lúmenes
+  ✅ 3 meses de garantía
 
-· CSP Premium $450 MXN 20,000 lúmenes 
-✅ 6 meses de garantía ⭐ (recomendado)
+· CSP Premium $450 MXN
+  20,000 lúmenes
+  ✅ 6 meses de garantía
+⭐ (recomendado)
 
 🔧 Instalación: $100 MXN
 
@@ -628,17 +719,9 @@ export async function generateBotReply({
 
 }) {
 
-  // =====================================
-  // ID CONVERSACION
-  // =====================================
-
   const conversationId =
     customerPhone ||
     "default";
-
-  // =====================================
-  // MEMORIA
-  // =====================================
 
   const memory =
     conversationMemory.get(
@@ -687,13 +770,13 @@ export async function generateBotReply({
   // DETECTAR VEHICULO
   // =====================================
 
-  const vehicle =
+  const vehicleData =
     detectVehicle(
       customerMessage
     );
 
   // =====================================
-  // DETECTAR FOCO MANUAL
+  // DETECTAR FOCO
   // =====================================
 
   const manualBulb =
@@ -736,15 +819,14 @@ export async function generateBotReply({
         "manual"
     };
 
-    // =====================================
-    // GUARDAR CACHE
-    // =====================================
-
     const db =
       await loadVehicleDatabase();
 
-    db[memory.vehicle] =
-      updatedData;
+    db[
+      normalizeVehicleName(
+        memory.vehicle
+      )
+    ] = updatedData;
 
     await saveVehicleDatabase(
       db
@@ -771,54 +853,133 @@ export async function generateBotReply({
   }
 
   // =====================================
-  // VEHICULO DETECTADO
+  // VEHICULO
   // =====================================
 
-  if (vehicle) {
+  if (vehicleData) {
 
-    const vehicleInfo =
-      await getVehicleInfo(
-        vehicle
-      );
+    // =====================================
+    // COMPLETO
+    // =====================================
 
-    if (vehicleInfo) {
+    if (
+      vehicleData.complete
+    ) {
+
+      const vehicle =
+        vehicleData.vehicle;
+
+      const vehicleInfo =
+        await getVehicleInfo(
+          vehicle
+        );
+
+      if (vehicleInfo) {
+
+        conversationMemory.set(
+          conversationId,
+          {
+            vehicle,
+            model:
+              vehicle
+                .split(" ")[0]
+          }
+        );
+
+        return buildVehicleReply({
+
+          greeting,
+
+          includeGreeting:
+            shouldIncludeGreeting(
+              customerMessage
+            ),
+
+          vehicle,
+
+          bulb:
+            vehicleInfo.bulb,
+
+          sameBulb:
+            vehicleInfo.sameBulb
+        });
+      }
+    }
+
+    // =====================================
+    // SOLO MODELO
+    // =====================================
+
+    if (
+      vehicleData.model &&
+      !vehicleData.year
+    ) {
 
       conversationMemory.set(
         conversationId,
         {
-          vehicle
+          ...memory,
+          model:
+            vehicleData.model
         }
       );
 
-      return buildVehicleReply({
-
-        greeting,
-
-        includeGreeting:
-          shouldIncludeGreeting(
-            customerMessage
-          ),
-
-        vehicle,
-
-        bulb:
-          vehicleInfo.bulb,
-
-        sameBulb:
-          vehicleInfo.sameBulb
-      });
-    }
-
-    return `
+      return `
 ${greeting}
 
-Déjame verificar ese modelo,
-ahorita te confirmo.
+¿Qué año es su ${vehicleData.model}?
 `.trim();
+    }
+
+    // =====================================
+    // SOLO AÑO
+    // =====================================
+
+    if (
+      vehicleData.year &&
+      memory?.model
+    ) {
+
+      const vehicle =
+        `${memory.model} ${vehicleData.year}`;
+
+      const vehicleInfo =
+        await getVehicleInfo(
+          vehicle
+        );
+
+      if (vehicleInfo) {
+
+        conversationMemory.set(
+          conversationId,
+          {
+            vehicle
+          }
+        );
+
+        return buildVehicleReply({
+
+          greeting,
+
+          includeGreeting:
+            shouldIncludeGreeting(
+              customerMessage
+            ),
+
+          vehicle,
+
+          bulb:
+            vehicleInfo.bulb,
+
+          sameBulb:
+            vehicleInfo.sameBulb
+        });
+      }
+    }
   }
 
   // =====================================
-  // FALLBACK SIMPLE
+  // FALLBACK
   // =====================================
 
   return `
