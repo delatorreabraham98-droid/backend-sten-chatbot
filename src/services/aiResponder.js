@@ -1,8 +1,6 @@
 import OpenAI from "openai";
-import axios from "axios";
 import fs from "fs/promises";
 import path from "path";
-import * as cheerio from "cheerio";
 
 import { config } from "../config.js";
 
@@ -134,7 +132,7 @@ function detectVehicle(message) {
 }
 
 // =====================================
-// DETECTAR FOCO
+// DETECTAR FOCO MANUAL
 // =====================================
 
 function detectBulb(message) {
@@ -190,217 +188,152 @@ function isDualBeamBulb(bulb) {
 }
 
 // =====================================
-// EXTRAER FOCO
+// CONSULTAR OPENAI
 // =====================================
 
-function extractBulb(text) {
-
-  const matches = text.match(
-    /\b(H13|H11|H9|H7|H4|9004|9005|9006|9007|H1|H3|H16)\b/g
-  );
-
-  if (!matches?.length) {
-    return null;
-  }
-
-  return matches[0];
-}
-
-// =====================================
-// SCRAPER SUPERBRIGHTLEDS
-// =====================================
-
-async function scrapeSuperBrightLEDs(
+async function detectVehicleBulbsAI(
   vehicle
 ) {
 
   try {
 
-    const url =
-      `https://www.superbrightleds.com/vehicle-lights?find=${encodeURIComponent(vehicle)}`;
+    const completion =
+      await openai.chat.completions.create({
 
-    const response =
-      await axios.get(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0"
-        },
-        timeout: 10000
+        model:
+          config.openai.model,
+
+        temperature: 0.1,
+
+        max_tokens: 80,
+
+        messages: [
+          {
+            role: "system",
+            content: `
+Eres un experto automotriz.
+
+Tu tarea es identificar:
+
+1. El tipo de foco delantero
+2. Si usa:
+- altas y bajas en el mismo foco
+o
+- focos separados
+
+IMPORTANTE:
+
+H13
+H4
+9004
+9007
+
+normalmente usan:
+altas y bajas en el mismo foco.
+
+Responde SOLO JSON.
+
+Formato dual:
+
+{
+  "sameBulb": true,
+  "bulb": "H13"
+}
+
+Formato separado:
+
+{
+  "sameBulb": false,
+  "high": "9005",
+  "low": "9006"
+}
+
+NO agregues texto extra.
+`
+          },
+
+          {
+            role: "user",
+            content:
+              vehicle
+          }
+        ]
       });
 
-    const $ =
-      cheerio.load(
-        response.data
-      );
-
     const text =
-      $("body").text();
+      completion
+        .choices[0]
+        ?.message
+        ?.content
+        ?.trim();
 
-    const bulb =
-      extractBulb(text);
-
-    if (!bulb) {
+    if (!text) {
       return null;
     }
 
-    const sameBulb =
-      isDualBeamBulb(
-        bulb
-      );
+    const parsed =
+      JSON.parse(text);
 
-    return {
+    // =====================================
+    // DUAL
+    // =====================================
 
-      bulb: sameBulb
-        ? bulb
-        : {
-            high: bulb,
-            low:
-              bulb === "9005"
-                ? "9006"
-                : bulb
-          },
+    if (
+      parsed.sameBulb &&
+      parsed.bulb
+    ) {
 
-      sameBulb,
+      return {
 
-      source:
-        "superbrightleds"
-    };
+        bulb:
+          parsed.bulb
+            .toUpperCase(),
 
-  } catch {
+        sameBulb: true,
+
+        source:
+          "openai"
+      };
+    }
+
+    // =====================================
+    // SEPARADO
+    // =====================================
+
+    if (
+      !parsed.sameBulb &&
+      parsed.high &&
+      parsed.low
+    ) {
+
+      return {
+
+        bulb: {
+
+          high:
+            parsed.high
+              .toUpperCase(),
+
+          low:
+            parsed.low
+              .toUpperCase()
+        },
+
+        sameBulb: false,
+
+        source:
+          "openai"
+      };
+    }
 
     return null;
 
-  }
-}
+  } catch (error) {
 
-// =====================================
-// SCRAPER AUTOZONE
-// =====================================
-
-async function scrapeAutoZone(
-  vehicle
-) {
-
-  try {
-
-    const url =
-      `https://www.autozone.com/searchresult?searchText=${encodeURIComponent(vehicle + " headlight bulb")}`;
-
-    const response =
-      await axios.get(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0"
-        },
-        timeout: 10000
-      });
-
-    const $ =
-      cheerio.load(
-        response.data
-      );
-
-    const text =
-      $("body").text();
-
-    const bulb =
-      extractBulb(text);
-
-    if (!bulb) {
-      return null;
-    }
-
-    const sameBulb =
-      isDualBeamBulb(
-        bulb
-      );
-
-    return {
-
-      bulb: sameBulb
-        ? bulb
-        : {
-            high: bulb,
-            low:
-              bulb === "9005"
-                ? "9006"
-                : bulb
-          },
-
-      sameBulb,
-
-      source:
-        "autozone"
-    };
-
-  } catch {
-
-    return null;
-
-  }
-}
-
-// =====================================
-// SCRAPER ROCKAUTO
-// =====================================
-
-async function scrapeRockAuto(
-  vehicle
-) {
-
-  try {
-
-    const url =
-      `https://www.rockauto.com/en/catalog/?carcode=${encodeURIComponent(vehicle)}`;
-
-    const response =
-      await axios.get(url, {
-        headers: {
-          "User-Agent":
-            "Mozilla/5.0"
-        },
-        timeout: 10000
-      });
-
-    const $ =
-      cheerio.load(
-        response.data
-      );
-
-    const text =
-      $("body").text();
-
-    const bulb =
-      extractBulb(text);
-
-    if (!bulb) {
-      return null;
-    }
-
-    const sameBulb =
-      isDualBeamBulb(
-        bulb
-      );
-
-    return {
-
-      bulb: sameBulb
-        ? bulb
-        : {
-            high: bulb,
-            low:
-              bulb === "9005"
-                ? "9006"
-                : bulb
-          },
-
-      sameBulb,
-
-      source:
-        "rockauto"
-    };
-
-  } catch {
+    console.log(
+      "OpenAI bulb detection error:",
+      error.message
+    );
 
     return null;
 
@@ -432,54 +365,38 @@ async function getVehicleInfo(
   }
 
   console.log(
-    "Buscando vehículo online..."
+    "Consultando OpenAI..."
   );
 
   // =====================================
-  // SCRAPERS
+  // OPENAI DETECCION
   // =====================================
 
-  const scrapers = [
-    scrapeSuperBrightLEDs,
-    scrapeAutoZone,
-    scrapeRockAuto
-  ];
+  const result =
+    await detectVehicleBulbsAI(
+      vehicle
+    );
 
-  for (const scraper of scrapers) {
-
-    try {
-
-      const result =
-        await scraper(
-          vehicle
-        );
-
-      if (result) {
-
-        db[vehicle] =
-          result;
-
-        await saveVehicleDatabase(
-          db
-        );
-
-        console.log(
-          "Vehículo guardado localmente"
-        );
-
-        return result;
-      }
-
-    } catch (error) {
-
-      console.log(
-        error.message
-      );
-
-    }
+  if (!result) {
+    return null;
   }
 
-  return null;
+  // =====================================
+  // GUARDAR CACHE
+  // =====================================
+
+  db[vehicle] =
+    result;
+
+  await saveVehicleDatabase(
+    db
+  );
+
+  console.log(
+    "Vehículo guardado localmente"
+  );
+
+  return result;
 }
 
 // =====================================
@@ -512,7 +429,7 @@ function buildVehicleReply({
       : "";
 
   // =====================================
-  // ALTAS Y BAJAS MISMO FOCO
+  // MISMO FOCO
   // =====================================
 
   if (sameBulb) {
@@ -545,7 +462,7 @@ $100 MXN adicionales
   }
 
   // =====================================
-  // ALTAS Y BAJAS SEPARADAS
+  // SEPARADOS
   // =====================================
 
   return `
@@ -588,8 +505,7 @@ $100 MXN adicionales
 export async function generateBotReply({
 
   customerMessage,
-  customerPhone,
-  conversationHistory = []
+  customerPhone
 
 }) {
 
@@ -701,10 +617,6 @@ export async function generateBotReply({
         "manual"
     };
 
-    // =====================================
-    // GUARDAR CACHE
-    // =====================================
-
     const db =
       await loadVehicleDatabase();
 
@@ -713,18 +625,6 @@ export async function generateBotReply({
 
     await saveVehicleDatabase(
       db
-    );
-
-    // =====================================
-    // ACTUALIZAR MEMORIA
-    // =====================================
-
-    conversationMemory.set(
-      conversationId,
-      {
-        vehicle:
-          memory.vehicle
-      }
     );
 
     return buildVehicleReply({
@@ -748,7 +648,7 @@ export async function generateBotReply({
   }
 
   // =====================================
-  // RESPUESTA AUTOMOTRIZ
+  // DETECTAR VEHICULO
   // =====================================
 
   if (vehicle) {
@@ -759,10 +659,6 @@ export async function generateBotReply({
       );
 
     if (vehicleInfo) {
-
-      // =====================================
-      // GUARDAR MEMORIA
-      // =====================================
 
       conversationMemory.set(
         conversationId,
