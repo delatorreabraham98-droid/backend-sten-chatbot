@@ -5,7 +5,6 @@ import {
   createConversationMessage,
   createLeadIfCommercialIntent,
   findOrCreateConversation,
-  getConversationHistory,
   getRuntimeContextForWhatsApp
 } from "../services/base44DataStore.js";
 import { sendWhatsAppTextMessage } from "../services/metaWhatsApp.js";
@@ -51,15 +50,10 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         rawPayload: message.raw
       });
 
-      const conversationHistory = await getConversationHistory(conversation.id, 10);
-
       const reply = await generateBotReply({
-        customerMessage: message.text,
+        customerPhone: message.from,
         customerName: message.customerName,
-        bot: runtimeContext.bot,
-        client: runtimeContext.client,
-        knowledgeItems: runtimeContext.knowledgeItems,
-        conversationHistory
+        customerMessage: message.text
       });
 
       const metaResponse = await sendWhatsAppTextMessage({

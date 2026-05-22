@@ -8,13 +8,15 @@
 
 ## Entry point & flow
 `src/server.js` → `src/routes/whatsapp.js` (Express router) → `src/services/`:
-1. `base44DataStore.js` — CRUD on Base44 entities (Channel, Bot, Client, Conversation, Message, Lead)
-2. `aiResponder.js` (exported as `generateBotReply`) — **rule-based if/else chain, no OpenAI calls**
+1. `base44DataStore.js` — CRUD on Base44 entities (Channel, Bot, Client, Conversation, Message, Lead). Uses `fetch()` with 15s timeout (AbortController).
+2. `aiResponder.js` (exported as `generateBotReply`) — **rule-based if/else chain, no OpenAI calls**. Requires `customerPhone` for Supabase memory lookup.
 3. `metaWhatsApp.js` — send reply via Meta Graph API v25.0
 
 Two webhook paths:
 - `GET /webhook/whatsapp` — Meta verification (hub.mode / hub.verify_token)
 - `POST /webhook/whatsapp` — inbound messages, replies 200 immediately then processes async
+
+Graceful shutdown on SIGTERM/SIGINT (10s forced exit timeout).
 
 ## aiResponder.js — priority chain (DO NOT reorder)
 1. `detectVehicleInfo` → `buildVehicleResponse`
@@ -42,11 +44,14 @@ Exported as `{BRAND}_DATABASE` objects, merged in `vehicleEngine.js`. Fuzzy matc
 ## Memory
 - Supabase `customer_memory` table via `supabaseMemory.js` (uses `maybeSingle()`, upserts by `phone`)
 - Also has `learned_expressions` and `conversation_analytics` tables from `supabase-schema.sql`
-- `memoryEngine.js` builds state snapshot from memory object
+- `aiResponder.js` requires `customerPhone` param — caller must pass `message.from`
 
-## Legacy/unused files (do not modify unless removing)
-- `src/services/base44Service.js` — replaced by `base44Client.js` / `base44DataStore.js`
-- `src/services/objectionEngine.js` — objection handling migrated to `intentEngine.js`
+## Shared utilities
+- `src/utils/normalize.js` — shared `normalize()` function used by both `vehicleEngine.js` and `intentEngine.js`
+
+## Removed legacy files (archived by git history)
+- `base44Service.js`, `objectionEngine.js`, `leadScoringEngine.js`, `memoryEngine.js` — unused code, removed
+- `salesEngine.js` — gutted to only `buildContinueSaleReply()` (only export used)
 
 ## Deploy
 Render auto-deploys from `origin/main`. Render config in `render.yaml`: `npm install` / `npm start`, health check `/health`.

@@ -6,26 +6,36 @@ function assertBase44Configured() {
   }
 }
 
+const BASE44_TIMEOUT_MS = 15_000;
+
 async function requestBase44(path, options = {}) {
   assertBase44Configured();
 
-  const response = await fetch(`${config.base44.apiBaseUrl}${path}`, {
-    ...options,
-    headers: {
-      "Content-Type": "application/json",
-      api_key: config.base44.apiKey,
-      ...options.headers
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), BASE44_TIMEOUT_MS);
+
+  try {
+    const response = await fetch(`${config.base44.apiBaseUrl}${path}`, {
+      ...options,
+      signal: controller.signal,
+      headers: {
+        "Content-Type": "application/json",
+        api_key: config.base44.apiKey,
+        ...options.headers
+      }
+    });
+
+    const payload = await response.json().catch(() => null);
+
+    if (!response.ok) {
+      const detail = payload?.message || payload?.error || "Base44 request failed";
+      throw new Error(detail);
     }
-  });
 
-  const payload = await response.json().catch(() => null);
-
-  if (!response.ok) {
-    const detail = payload?.message || payload?.error || "Base44 request failed";
-    throw new Error(detail);
+    return payload;
+  } finally {
+    clearTimeout(timer);
   }
-
-  return payload;
 }
 
 function buildQuery({ q, limit, skip, sortBy } = {}) {

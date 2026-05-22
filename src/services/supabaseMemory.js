@@ -1,11 +1,17 @@
 import { createClient } from "@supabase/supabase-js";
 
-const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY
-);
+function getClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  return createClient(url, key);
+}
+
+const supabase = getClient();
 
 export async function getCustomerMemory(phone) {
+
+  if (!supabase) return null;
 
   const { data, error } = await supabase
     .from("customer_memory")
@@ -21,6 +27,8 @@ export async function getCustomerMemory(phone) {
 }
 
 export async function saveCustomerMemory(phone, memory) {
+
+  if (!supabase) return;
 
   const { error } = await supabase
     .from("customer_memory")

@@ -4,6 +4,7 @@ import { HONDA_DATABASE } from "../data/vehicleDatabaseHonda.js";
 import { CHEVROLET_DATABASE } from "../data/vehicleDatabaseChevrolet.js";
 import { FORD_DATABASE } from "../data/vehicleDatabaseFord.js";
 import { MITSUBISHI_DATABASE } from "../data/vehicleDatabaseMitsubishi.js";
+import { normalize } from "../utils/normalize.js";
 
 const DATABASE = {
   ...TOYOTA_DATABASE,
@@ -13,15 +14,6 @@ const DATABASE = {
   ...FORD_DATABASE,
   ...MITSUBISHI_DATABASE
 };
-
-function normalize(text = "") {
-  return text
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9\s]/g, "")
-    .trim();
-}
 
 function similarity(a, b) {
   a = normalize(a);
