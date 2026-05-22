@@ -24,6 +24,9 @@ import {
   buildContinueSaleReply
 } from "./salesEngine.js";
 
+import { sendWhatsAppTextMessage } from "./metaWhatsApp.js";
+import { config } from "../config.js";
+
 export async function generateAIReply({
   customerPhone,
   customerName,
@@ -365,12 +368,45 @@ ${memory.selected_product}
     if (memory.conversation_stage === "asked_schedule") {
       memory.conversation_stage = "completed";
       await saveCustomerMemory(customerPhone, memory);
+
+      const productNames = {
+        COB_2_CARAS: "COB 2 Caras",
+        COB_4_CARAS: "COB 4 Caras",
+        CSP_PREMIUM: "CSP Premium"
+      };
+      const productPrices = {
+        COB_2_CARAS: "$250",
+        COB_4_CARAS: "$350",
+        CSP_PREMIUM: "$500"
+      };
+      const productName = productNames[memory.selected_product] || memory.selected_product || "N/A";
+      const productPrice = productPrices[memory.selected_product] || "";
+
+      const adminMsg = [
+        "🔔 *Nuevo Lead - Cita Confirmada*",
+        "",
+        `👤 Cliente: ${customerName || memory.customer_name || "No especificado"}`,
+        `📱 Teléfono: ${customerPhone}`,
+        `🚗 Vehículo: ${memory.vehicle || "No especificado"}`,
+        `💡 Baja: ${memory.bulb_low || "N/A"}`,
+        `💡 Alta: ${memory.bulb_high || "N/A"}`,
+        `🛒 Producto: ${productName}${productPrice ? " (" + productPrice + " MXN)" : ""}`,
+        `📋 Estatus: Pendiente de confirmar lugar y hora`
+      ].join("\n");
+
+      if (config.adminWhatsappNumber) {
+        sendWhatsAppTextMessage({
+          to: config.adminWhatsappNumber,
+          body: adminMsg
+        }).catch((err) => {
+          console.error("Failed to notify admin:", err.message);
+        });
+      }
+
       return `
 Perfecto 👌
 
-Lo esperamos.
-
-📱 686 471 9077
+En un momento recibirá una llamada para confirmar lugar y hora de entrega.
 `.trim();
     }
 
