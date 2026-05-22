@@ -70,7 +70,17 @@ function findVehicleModel(message) {
   return null;
 }
 
+const GREETING_RE = /\b(buen[ao]s|hola|saludos|que tal|qué tal)\b/i;
+
+function isGreetingOnly(message) {
+  const words = message.trim().split(/\s+/);
+  if (words.length > 4) return false;
+  return GREETING_RE.test(message);
+}
+
 export function detectVehicleInfo(message) {
+
+  if (isGreetingOnly(message)) return null;
 
   const found = findVehicleModel(message);
 

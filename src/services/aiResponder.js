@@ -231,6 +231,23 @@ Las opciones disponibles son:
           ? `✅ Corregido a ${memory.bulb_low}`
           : `✅ Bajas: ${memory.bulb_low} | Altas: ${memory.bulb_high}`;
 
+        if (memory.selected_product) {
+          const productPrices = {
+            COB_2_CARAS: 250,
+            COB_4_CARAS: 350,
+            CSP_PREMIUM: 500
+          };
+          const productIntent = {
+            product: memory.selected_product,
+            price: productPrices[memory.selected_product] || 0
+          };
+          const vehicleForReply = {
+            lowBeam: memory.bulb_low,
+            highBeam: memory.bulb_high
+          };
+          return `${displayBulbs}\n\n${buildProductReply(productIntent, vehicleForReply)}`;
+        }
+
         return `
 ${displayBulbs}
 

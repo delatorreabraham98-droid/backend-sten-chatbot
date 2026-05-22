@@ -30,12 +30,16 @@ export async function saveCustomerMemory(phone, memory) {
 
   if (!supabase) return;
 
+  const { id: _id, created_at: _ca, updated_at: _ua, ...cleanMemory } = memory;
+
   const { error } = await supabase
     .from("customer_memory")
     .upsert({
-      ...memory,
+      ...cleanMemory,
       phone,
       updated_at: new Date().toISOString()
+    }, {
+      onConflict: "phone"
     });
 
   if (error) {
