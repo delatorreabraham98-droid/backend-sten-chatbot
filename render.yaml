@@ -35,3 +35,5 @@ services:
         value: La Torre LED Shop
       - key: BOT_TIMEZONE
         value: America/Tijuana
+      - key: ADMIN_WHATSAPP_NUMBER
+        sync: false
