@@ -124,20 +124,40 @@ con halógeno normal.
 
     case "continue_sale":
 
-      return `
-Perfecto 👌
-
-Seguimos con su cotización.
-
-¿Cuál opción le interesa más?
-
-· $250 económica
-· $350 más potencia
-· $500 premium
-`.trim();
+      return buildContinueSaleReply();
 
     default:
 
       return null;
   }
+}
+
+export function buildContinueSaleReply() {
+  return `
+Seguimos con su cotización 👌
+
+Opciones disponibles:
+
+🔹 COB 2 Caras — $250
+🔹 COB 4 Caras — $350
+🔹 CSP Premium — $500
+
+¿Cuál le interesa?
+`.trim();
+}
+
+export function generateObjectionReply(type = 'default') {
+  if (type === 'price') {
+    return 'Las de $250 son muy buena opción si busca algo económico 👌';
+  }
+
+  return 'Aquí seguimos para ayudarle 👌';
+}
+
+export function generatePersuasionReply(type = 'premium') {
+  if (type === 'premium') {
+    return 'Las CSP Premium son las más recomendadas 🔥';
+  }
+
+  return 'Tenemos varias opciones disponibles 👌';
 }
