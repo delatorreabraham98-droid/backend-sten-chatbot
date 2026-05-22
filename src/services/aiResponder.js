@@ -151,6 +151,60 @@ Las opciones disponibles son:
 
   /*
     ==================================================
+    BULB CODE CORRECTION — user says "usa 9007"
+    ==================================================
+  */
+
+  if (memory.vehicle) {
+    const verbPattern = /\b(?:usa|ocupa|lleva|necesito|es|son)\s+(?:el\s+|la\s+|foco\s+|focos\s+)?/;
+    const bulbPattern = /\b(h\d{1,2}|9\d{3}|d[1-4][rs]|5202|88[01]|744[03]|194|921|912)\b/;
+    const verbMatch = lower.match(verbPattern);
+
+    if (verbMatch) {
+      const restAfterVerb = lower.slice(verbMatch[0].length);
+      const bulbMatch = restAfterVerb.match(bulbPattern);
+
+      if (bulbMatch) {
+        const code = bulbMatch[1].toUpperCase();
+
+        const lowBeam = lower.match(/(?:bajas|baja|bajo)\s+((?:h\d{1,2}|9\d{3}|d[1-4][rs]|5202|88[01]|744[03]|194|921|912))/i);
+        const highBeam = lower.match(/(?:altas|alta|alto)\s+((?:h\d{1,2}|9\d{3}|d[1-4][rs]|5202|88[01]|744[03]|194|921|912))/i);
+
+        if (lowBeam || highBeam) {
+          if (lowBeam) memory.bulb_low = lowBeam[1].toUpperCase();
+          if (highBeam) memory.bulb_high = highBeam[1].toUpperCase();
+          memory.bulb_type = memory.bulb_low !== memory.bulb_high ? "split" : "dual";
+        } else {
+          memory.bulb_low = code;
+          memory.bulb_high = code;
+          memory.bulb_type = "dual";
+        }
+
+        await saveCustomerMemory(customerPhone, memory);
+
+        const displayBulbs = memory.bulb_low === memory.bulb_high
+          ? `✅ Corregido a ${memory.bulb_low}`
+          : `✅ Bajas: ${memory.bulb_low} | Altas: ${memory.bulb_high}`;
+
+        return `
+${displayBulbs}
+
+Seguimos con su ${memory.vehicle}
+
+Opciones disponibles:
+
+🔹 COB 2 Caras — $250
+🔹 COB 4 Caras — $350
+🔹 CSP Premium — $500 🔥
+
+¿Cuál le interesa?
+`.trim();
+      }
+    }
+  }
+
+  /*
+    ==================================================
     PRODUCT FOLLOW-UP
     ==================================================
   */

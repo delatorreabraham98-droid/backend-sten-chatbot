@@ -23,13 +23,14 @@ Graceful shutdown on SIGTERM/SIGINT (10s forced exit timeout).
 2. `!detectVehicleInfo` → `webVehicleLookup` (Tavily API, fallback for brands not in DB)
 3. `detectObjection` → `buildObjectionReply`
 4. `memory.vehicle` + "1 función" → 1-function reply
-5. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
-6. `memory.selected_product` + "instalacion" → installation reply
-7. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
-8. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
-9. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
-10. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
-11. fallback → ask year/model
+5. `memory.vehicle` + "usa/ocupa/lleva [bulb]" → bulb code correction (updates memory)
+6. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
+7. `memory.selected_product` + "instalacion" → installation reply
+8. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
+9. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
+10. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
+11. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
+12. fallback → ask year/model
 
 ## Vehicle databases
 6 brand files in `src/data/vehicleDatabase{Brand}.js` (Toyota, Nissan, Honda, Chevrolet, Ford, Mitsubishi).
