@@ -5,7 +5,13 @@ export function detectSelectedProduct(message) {
   if (
     text.includes("250") ||
     text.includes("2 caras") ||
-    text.includes("economicas")
+    text.includes("economicas") ||
+    text.includes("economicas") ||
+    text.includes("baratas") ||
+    text.includes("las mas baratas") ||
+    text.includes("las más baratas") ||
+    text.includes("las economicas") ||
+    text.includes("las económicas")
   ) {
     return "COB 2 Caras $250";
   }
@@ -20,7 +26,8 @@ export function detectSelectedProduct(message) {
   if (
     text.includes("500") ||
     text.includes("premium") ||
-    text.includes("csp")
+    text.includes("csp") ||
+    text.includes("las buenas")
   ) {
     return "CSP Premium $500";
   }
@@ -76,8 +83,7 @@ export function detectConversationIntent(message) {
 
   if (
     text.includes("amazon") ||
-    text.includes("mercado libre") ||
-    text.includes("mas baratas")
+    text.includes("mercado libre")
   ) {
     return "comparison";
   }
