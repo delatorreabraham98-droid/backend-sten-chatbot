@@ -3,77 +3,199 @@ function normalize(text = "") {
     .toLowerCase()
     .normalize("NFD")
     .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^\w\s]/gi, "")
     .trim();
 }
 
-const CHEAP_KEYWORDS = [
-  "baratas",
-  "economicas",
-  "economicas",
-  "2 caras",
-  "dos caras",
-  "$250",
-  "250"
+const PRODUCT_MAPPINGS = [
+
+  // COB 2 CARAS
+
+  {
+    product: "COB_2_CARAS",
+    price: 250,
+    keywords: [
+      "2 caras",
+      "dos caras",
+      "baratas",
+      "economicas",
+      "económicas",
+      "basicas",
+      "básicas",
+      "250",
+      "$250",
+      "las mas baratas",
+      "las baratas",
+      "las sencillas",
+      "las normales"
+    ]
+  },
+
+  // COB 4 CARAS
+
+  {
+    product: "COB_4_CARAS",
+    price: 350,
+    keywords: [
+      "4 caras",
+      "cuatro caras",
+      "350",
+      "$350",
+      "intermedias",
+      "mejores que las basicas",
+      "mas luz",
+      "más luz"
+    ]
+  },
+
+  // CSP PREMIUM
+
+  {
+    product: "CSP_PREMIUM",
+    price: 500,
+    keywords: [
+      "premium",
+      "csp",
+      "las buenas",
+      "las mejores",
+      "las premium",
+      "de calidad",
+      "potentes",
+      "500",
+      "$500",
+      "recomendadas",
+      "recomendacion",
+      "recomendación",
+      "quiero calidad",
+      "quiero algo bueno",
+      "quiero las mejores",
+      "las chidas"
+    ]
+  }
+
 ];
 
-const PREMIUM_KEYWORDS = [
-  "premium",
-  "mejores",
-  "buenas",
-  "calidad",
-  "potentes",
-  "500",
-  "$500",
-  "csp"
-];
+const OBJECTION_PATTERNS = [
 
-const MID_KEYWORDS = [
-  "4 caras",
-  "cuatro caras",
-  "$350",
-  "350"
+  {
+    type: "BAD_PREVIOUS_EXPERIENCE",
+    keywords: [
+      "salieron malas",
+      "salieron chafas",
+      "me duraron poco",
+      "no alumbraban",
+      "no sirven",
+      "compre unas y salieron malas",
+      "compré unas y salieron malas",
+      "compre unas y estaban chafas",
+      "compré unas y estaban chafas"
+    ]
+  },
+
+  {
+    type: "PRICE_OBJECTION",
+    keywords: [
+      "muy caras",
+      "muy caro",
+      "estan caras",
+      "están caras",
+      "porque tan caras",
+      "por que tan caras"
+    ]
+  }
+
 ];
 
 export function detectProductIntent(message = "") {
 
   const text = normalize(message);
 
-  for (const keyword of CHEAP_KEYWORDS) {
-    if (text.includes(keyword)) {
-      return {
-        product: "COB_2_CARAS",
-        price: 250
-      };
-    }
-  }
+  for (const mapping of PRODUCT_MAPPINGS) {
 
-  for (const keyword of MID_KEYWORDS) {
-    if (text.includes(keyword)) {
-      return {
-        product: "COB_4_CARAS",
-        price: 350
-      };
-    }
-  }
+    for (const keyword of mapping.keywords) {
 
-  for (const keyword of PREMIUM_KEYWORDS) {
-    if (text.includes(keyword)) {
-      return {
-        product: "CSP_PREMIUM",
-        price: 500
-      };
+      if (text.includes(normalize(keyword))) {
+
+        return {
+          product: mapping.product,
+          price: mapping.price
+        };
+      }
     }
   }
 
   return null;
 }
 
+export function detectObjection(message = "") {
+
+  const text = normalize(message);
+
+  for (const objection of OBJECTION_PATTERNS) {
+
+    for (const keyword of objection.keywords) {
+
+      if (text.includes(normalize(keyword))) {
+
+        return objection.type;
+      }
+    }
+  }
+
+  return null;
+}
+
+export function buildObjectionReply(type) {
+
+  switch (type) {
+
+    case "BAD_PREVIOUS_EXPERIENCE":
+
+      return `😅 Sí pasa mucho con las genéricas baratas.
+
+Las nuestras ya las probamos aquí en Mexicali 🔥
+
+✅ Buena intensidad
+✅ Mejor disipación
+✅ Garantía real
+
+Las CSP Premium son las que más recomendamos porque duran mucho más 👌`;
+
+    case "PRICE_OBJECTION":
+
+      return `🔥 Tratamos de manejar buena calidad para evitar fallas.
+
+Además incluyen garantía real 👌
+
+Las de 2 caras salen muy buenas si busca algo económico.`;
+
+    default:
+      return null;
+  }
+}
+
 export function buildProductReply(intent, vehicle) {
 
   if (!intent) return null;
 
-  const bulb =
+  const lowBeam =
     vehicle?.lowBeam || "compatible";
+
+  const highBeam =
+    vehicle?.highBeam || lowBeam;
+
+  const sameBulb =
+    lowBeam === highBeam;
+
+  let bulbText = "";
+
+  if (sameBulb) {
+    bulbText = `💡 Medida: ${lowBeam}`;
+  } else {
+    bulbText =
+`💡 Baja: ${lowBeam}
+💡 Alta: ${highBeam}`;
+  }
 
   switch (intent.product) {
 
@@ -81,7 +203,8 @@ export function buildProductReply(intent, vehicle) {
 
       return `🔥 Tenemos las COB 2 Caras
 
-💡 Medida: ${bulb}
+${bulbText}
+
 💰 Precio: $250 MXN
 ✅ 3 meses garantía
 
@@ -93,11 +216,14 @@ Son las más económicas y jalan muy bien 👌
 
       return `🔥 Tenemos las COB 4 Caras
 
-💡 Medida: ${bulb}
+${bulbText}
+
 💰 Precio: $350 MXN
 ✅ 3 meses garantía
 
-Alumbran más que las básicas y tienen mejor dispersión 🔥
+✅ Mejor dispersión
+✅ Más intensidad
+✅ Mejor iluminación lateral 🔥
 
 ¿Desea instalación también?`;
 
@@ -105,16 +231,18 @@ Alumbran más que las básicas y tienen mejor dispersión 🔥
 
       return `🔥 Las CSP Premium son las más recomendadas
 
-💡 Medida: ${bulb}
+${bulbText}
+
 💰 Precio: $500 MXN
 ✅ 6 meses garantía
 
-✅ Mucho más potencia
+✅ Mucha más potencia
 ✅ Mejor duración
-✅ Mejor intensidad
 ✅ Luz más limpia
+✅ Mejor alcance
+✅ Excelente para carretera 🔥
 
-Son ideales si quiere buena calidad 🔥`;
+Son las que más vendemos 👌`;
 
     default:
       return null;
