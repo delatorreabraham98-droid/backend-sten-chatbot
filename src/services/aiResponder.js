@@ -77,11 +77,31 @@ const vehicleModels = [
   "sierra"
 ];
 
+const weakMessages = [
+  "ok",
+  "oka",
+  "sale",
+  "si",
+  "sí",
+  "va",
+  "arre",
+  "ajá",
+  "aja",
+  "gracias",
+  "👍",
+  "👌"
+];
+
 async function loadVehicleDatabase() {
+
   try {
-    const file = await fs.readFile(DB_PATH,"utf8");
+
+    const file = await fs.readFile(DB_PATH, "utf8");
+
     return JSON.parse(file);
+
   } catch {
+
     return {};
   }
 }
@@ -94,6 +114,7 @@ function normalizeVehicleName(vehicle) {
     normalized.includes("focus") &&
     !normalized.includes("ford")
   ) {
+
     normalized = `ford ${normalized}`;
   }
 
@@ -104,24 +125,43 @@ function detectVehicle(message) {
 
   const clean = message.toLowerCase();
 
-  const yearMatch = clean.match(/\b(19|20)\d{2}\b/);
+  const yearMatch =
+    clean.match(/\b(19|20)\d{2}\b/);
 
-  const year = yearMatch ? yearMatch[0] : null;
+  const year =
+    yearMatch ? yearMatch[0] : null;
 
-  const foundBrand = vehicleBrands.find(
-    brand => clean.includes(brand)
-  );
+  const foundBrand =
+    vehicleBrands.find(
+      brand => clean.includes(brand)
+    );
 
-  const foundModel = vehicleModels.find(
-    model => clean.includes(model)
-  );
+  const foundModel =
+    vehicleModels.find(
+      model => clean.includes(model)
+    );
 
-  if (year && (foundBrand || foundModel)) {
+  if (
+    (foundBrand || foundModel) &&
+    !year
+  ) {
+
+    return {
+      incomplete: true,
+      brand: foundBrand,
+      model: foundModel
+    };
+  }
+
+  if (
+    year &&
+    (foundBrand || foundModel)
+  ) {
 
     return {
       complete: true,
       vehicle: `${foundBrand || ""} ${foundModel || ""} ${year}`
-        .replace(/\s+/g," ")
+        .replace(/\s+/g, " ")
         .trim()
     };
   }
@@ -131,15 +171,19 @@ function detectVehicle(message) {
 
 async function getVehicleInfo(vehicle) {
 
-  const normalized = normalizeVehicleName(vehicle);
+  const normalized =
+    normalizeVehicleName(vehicle);
 
   if (knownVehicles[normalized]) {
+
     return knownVehicles[normalized];
   }
 
-  const db = await loadVehicleDatabase();
+  const db =
+    await loadVehicleDatabase();
 
   if (db[normalized]) {
+
     return db[normalized];
   }
 
@@ -149,7 +193,10 @@ async function getVehicleInfo(vehicle) {
   };
 }
 
-function buildVehicleReply({ vehicle, bulb }) {
+function buildVehicleReply({
+  vehicle,
+  bulb
+}) {
 
   return `
 [${vehicle}]
@@ -168,7 +215,29 @@ function buildVehicleReply({ vehicle, bulb }) {
 }
 
 function getGreeting() {
+
   return "Buenas tardes";
+}
+
+function isWeakMessage(message) {
+
+  const clean =
+    message.toLowerCase().trim();
+
+  return weakMessages.includes(clean);
+}
+
+function buildContinueSaleReply() {
+
+  return `
+Seguimos con su cotización 👌
+
+¿Cuál opción le interesa más?
+
+· $250 económica
+· $350 más potencia
+· $500 premium
+`.trim();
 }
 
 export async function generateBotReply({
@@ -178,20 +247,133 @@ export async function generateBotReply({
 
   const greeting = getGreeting();
 
-  const conversationId = customerPhone || "default";
+  const conversationId =
+    customerPhone || "default";
 
-  const memory = await getCustomerMemory(conversationId);
+  const memory =
+    await getCustomerMemory(
+      conversationId
+    );
 
-  const conversationalIntent = detectConversationIntent(customerMessage);
+  const text =
+    customerMessage.toLowerCase();
 
-  if (conversationalIntent) {
+  const conversationalIntent =
+    detectConversationIntent(
+      customerMessage
+    );
 
-    return generateSalesReply(conversationalIntent);
+  /*
+    ===================================================
+    STICKY SALES CONTEXT
+    ===================================================
+  */
+
+  if (
+    conversationalIntent &&
+    memory.vehicle
+  ) {
+
+    const reply =
+      generateSalesReply(
+        conversationalIntent
+      );
+
+    if (reply) {
+
+      return reply;
+    }
   }
 
-  if (memory.stage === "awaiting_delivery_type") {
+  /*
+    ===================================================
+    ANTI RESET FLOW
+    ===================================================
+  */
 
-    const text = customerMessage.toLowerCase();
+  if (
+    memory.vehicle &&
+    isWeakMessage(customerMessage)
+  ) {
+
+    if (memory.selected_product) {
+
+      return `
+Perfecto 👌
+
+¿Desea instalación,
+punto medio
+o entrega a domicilio?
+`.trim();
+    }
+
+    return buildContinueSaleReply();
+  }
+
+  /*
+    ===================================================
+    PRODUCT FOLLOW-UP INTELLIGENCE
+    ===================================================
+  */
+
+  if (
+    memory.vehicle &&
+    !memory.selected_product
+  ) {
+
+    const selectedProduct =
+      detectSelectedProduct(
+        customerMessage
+      );
+
+    if (selectedProduct) {
+
+      await saveCustomerMemory(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_delivery_type",
+          selected_product:
+            selectedProduct
+        }
+      );
+
+      await increaseLeadScore(
+        conversationId,
+        15
+      );
+
+      return `
+Perfecto 👌
+
+Seleccionó:
+${selectedProduct}
+
+¿Desea instalación,
+punto medio
+o entrega a domicilio?
+`.trim();
+    }
+
+    if (
+      customerMessage.length < 40
+    ) {
+
+      return buildContinueSaleReply();
+    }
+  }
+
+  /*
+    ===================================================
+    DELIVERY FLOW
+    ===================================================
+  */
+
+  if (
+    memory.stage ===
+    "awaiting_delivery_type"
+  ) {
 
     const wantsInstallation =
       text.includes("instalacion") ||
@@ -209,24 +391,33 @@ export async function generateBotReply({
       wantsDelivery
     ) {
 
-      await saveCustomerMemory(conversationId, {
-        ...memory,
-        stage: "awaiting_address",
-        delivery_type: "domicilio",
-        installation: true
-      });
+      await saveCustomerMemory(
+        conversationId,
+        {
+          ...memory,
+          stage: "awaiting_address",
+          delivery_type:
+            "domicilio",
+          installation: true
+        }
+      );
 
-      await increaseLeadScore(conversationId,20);
+      await increaseLeadScore(
+        conversationId,
+        20
+      );
 
       await createQuote({
         phone: conversationId,
         vehicle: memory.vehicle,
-        product: memory.selected_product,
-        delivery_type: "domicilio + instalación"
+        product:
+          memory.selected_product,
+        delivery_type:
+          "domicilio + instalación"
       });
 
       return `
-Perfecto.
+Perfecto 👌
 
 La instalación a domicilio
 tiene costo adicional
@@ -238,31 +429,41 @@ de $100 MXN.
 
     if (wantsInstallation) {
 
-      await saveCustomerMemory(conversationId, {
-        ...memory,
-        stage: "completed",
-        installation: true
-      });
+      await saveCustomerMemory(
+        conversationId,
+        {
+          ...memory,
+          stage: "completed",
+          installation: true
+        }
+      );
 
       return `
-Perfecto.
+Perfecto 👌
 
 La instalación tiene costo
 de $100 MXN.
 
 📱 686 471 9077
+
+Puede mandar WhatsApp
+para coordinar instalación.
 `.trim();
     }
 
     if (wantsMeetingPoint) {
 
-      await saveCustomerMemory(conversationId, {
-        ...memory,
-        stage: "awaiting_meeting_point"
-      });
+      await saveCustomerMemory(
+        conversationId,
+        {
+          ...memory,
+          stage:
+            "awaiting_meeting_point"
+        }
+      );
 
       return `
-Perfecto.
+Perfecto 👌
 
 ¿En cuál punto le queda mejor?
 
@@ -277,14 +478,18 @@ Perfecto.
 
     if (wantsDelivery) {
 
-      await saveCustomerMemory(conversationId, {
-        ...memory,
-        stage: "awaiting_address",
-        delivery_type: "domicilio"
-      });
+      await saveCustomerMemory(
+        conversationId,
+        {
+          ...memory,
+          stage: "awaiting_address",
+          delivery_type:
+            "domicilio"
+        }
+      );
 
       return `
-Perfecto.
+Perfecto 👌
 
 El envío a domicilio
 tiene costo adicional
@@ -293,40 +498,71 @@ de $100 MXN.
 ¿En qué colonia se encuentra?
 `.trim();
     }
-  }
-
-  if (memory.stage === "awaiting_address") {
-
-    await saveCustomerMemory(conversationId, {
-      ...memory,
-      stage: "completed",
-      address: customerMessage
-    });
 
     return `
-Perfecto.
+¿Desea instalación,
+punto medio
+o entrega a domicilio?
+`.trim();
+  }
+
+  /*
+    ===================================================
+    ADDRESS FLOW
+    ===================================================
+  */
+
+  if (
+    memory.stage ===
+    "awaiting_address"
+  ) {
+
+    await saveCustomerMemory(
+      conversationId,
+      {
+        ...memory,
+        stage: "completed",
+        address: customerMessage
+      }
+    );
+
+    return `
+Perfecto 👌
 
 📍 Dirección guardada.
 
-En un momento le confirmamos
-su instalación o entrega.
+En un momento
+le confirmamos horario.
 
 📱 686 471 9077
 `.trim();
   }
 
-  if (memory.stage === "awaiting_meeting_point") {
+  /*
+    ===================================================
+    MEETING POINT FLOW
+    ===================================================
+  */
 
-    await saveCustomerMemory(conversationId, {
-      ...memory,
-      stage: "completed",
-      meeting_point: customerMessage
-    });
+  if (
+    memory.stage ===
+    "awaiting_meeting_point"
+  ) {
+
+    await saveCustomerMemory(
+      conversationId,
+      {
+        ...memory,
+        stage: "completed",
+        meeting_point:
+          customerMessage
+      }
+    );
 
     return `
-Perfecto.
+Perfecto 👌
 
-📍 Punto de entrega:
+📍 Punto guardado:
 ${customerMessage}
 
 🚗 Vehículo:
@@ -340,52 +576,60 @@ le confirmamos horario.
 `.trim();
   }
 
-  const selectedProduct = detectSelectedProduct(customerMessage);
+  /*
+    ===================================================
+    VEHICLE DETECTION
+    ===================================================
+  */
 
-  if (selectedProduct && memory?.vehicle) {
+  const vehicleData =
+    detectVehicle(customerMessage);
 
-    await saveCustomerMemory(conversationId, {
-      ...memory,
-      stage: "awaiting_delivery_type",
-      selected_product: selectedProduct
-    });
+  /*
+    ===================================================
+    VEHICLE ONLY MODE
+    ===================================================
+  */
 
-    await increaseLeadScore(conversationId,15);
+  if (vehicleData?.incomplete) {
 
-    await createLead({
-      phone: conversationId,
-      vehicle: memory.vehicle,
-      product: selectedProduct,
-      lead_score: (memory.lead_score || 0) + 15
-    });
+    const vehicleName =
+      vehicleData.model ||
+      vehicleData.brand ||
+      "vehículo";
 
     return `
-Perfecto.
-
-Seleccionó:
-${selectedProduct}
-
-¿Desea instalación,
-punto medio
-o entrega a domicilio?
+¿Qué año es su ${vehicleName}?
 `.trim();
   }
 
-  const vehicleData = detectVehicle(customerMessage);
+  /*
+    ===================================================
+    FULL VEHICLE DETECTED
+    ===================================================
+  */
 
   if (vehicleData?.complete) {
 
-    const vehicle = vehicleData.vehicle;
+    const vehicle =
+      vehicleData.vehicle;
 
-    const vehicleInfo = await getVehicleInfo(vehicle);
+    const vehicleInfo =
+      await getVehicleInfo(vehicle);
 
-    await saveCustomerMemory(conversationId, {
-      ...memory,
-      vehicle,
-      stage: "quoted"
-    });
+    await saveCustomerMemory(
+      conversationId,
+      {
+        ...memory,
+        vehicle,
+        stage: "quoted"
+      }
+    );
 
-    await increaseLeadScore(conversationId,10);
+    await increaseLeadScore(
+      conversationId,
+      10
+    );
 
     return buildVehicleReply({
       vehicle,
@@ -393,15 +637,22 @@ o entrega a domicilio?
     });
   }
 
-  if (memory.stage !== "idle") {
+  /*
+    ===================================================
+    CONTINUATION MEMORY
+    ===================================================
+  */
 
-    return `
-Perdón.
+  if (memory.vehicle) {
 
-¿Me puede explicar un poquito más
-para ayudarle mejor?
-`.trim();
+    return buildContinueSaleReply();
   }
+
+  /*
+    ===================================================
+    INITIAL GREETING
+    ===================================================
+  */
 
   return `
 ${greeting}
