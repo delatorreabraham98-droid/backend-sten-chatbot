@@ -20,7 +20,11 @@ const PRODUCT_MAPPINGS = [
       "las mas baratas",
       "las baratas",
       "las sencillas",
-      "las normales"
+      "las normales",
+      "la 1",
+      "la primera",
+      "opcion 1",
+      "opción 1"
     ]
   },
 
@@ -37,7 +41,11 @@ const PRODUCT_MAPPINGS = [
       "intermedias",
       "mejores que las basicas",
       "mas luz",
-      "más luz"
+      "más luz",
+      "la 2",
+      "la segunda",
+      "opcion 2",
+      "opción 2"
     ]
   },
 
@@ -62,7 +70,11 @@ const PRODUCT_MAPPINGS = [
       "quiero calidad",
       "quiero algo bueno",
       "quiero las mejores",
-      "las chidas"
+      "las chidas",
+      "la 3",
+      "la tercera",
+      "opcion 3",
+      "opción 3"
     ]
   }
 

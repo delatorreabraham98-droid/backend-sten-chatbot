@@ -19,6 +19,8 @@ function similarity(a, b) {
   a = normalize(a);
   b = normalize(b);
 
+  if (!a || !b) return 0;
+
   if (a === b) return 1;
 
   if (a.includes(b) || b.includes(a)) {

@@ -176,6 +176,35 @@ Las opciones disponibles son:
 
   /*
     ==================================================
+    AFFIRMATIVE RESPONSE AFTER PRODUCT SELECTION
+    ==================================================
+  */
+
+  if (
+    memory.selected_product &&
+    (
+      lower === 'si' ||
+      lower === 'sí' ||
+      lower === 'yes' ||
+      lower.startsWith('si ') ||
+      lower.startsWith('sí ')
+    )
+  ) {
+
+    return `
+Perfecto 👌
+
+${memory.selected_product}
+
+¿Desea:
+✅ instalación
+✅ punto medio
+✅ entrega a domicilio?
+`.trim();
+  }
+
+  /*
+    ==================================================
     INSTALLATION
     ==================================================
   */
