@@ -34,6 +34,7 @@ export async function generateAIReply({
       customer_name: customerName || "",
       vehicle: null,
       bulb: null,
+      bulb_type: null,
       selected_product: null,
       conversation_stage: "new",
       lead_score: 0,
@@ -57,14 +58,20 @@ export async function generateAIReply({
 
     memory.vehicle = vehicleData.vehicle;
     memory.bulb = vehicleData.bulb;
+    memory.bulb_type = vehicleData.bulbType;
     memory.conversation_stage = "vehicle_selected";
 
     await saveCustomerMemory(customerPhone, memory);
 
+    const bulbExplanation =
+      vehicleData.bulbType === 'single'
+        ? `🔦 Usa ${vehicleData.bulb} (1 función)\nSe ocupa un foco para bajas y otro para altas`
+        : `🔦 Usa ${vehicleData.bulb} para altas y bajas`;
+
     return `
 [${vehicleData.vehicle}]
 
-🔦 Usa ${vehicleData.bulb} para altas y bajas
+${bulbExplanation}
 
 · COB 2 Caras $250 MXN
   ✅ 3 meses garantía
@@ -82,7 +89,43 @@ export async function generateAIReply({
 
   /*
     ==================================================
-    PRODUCT FOLLOW-UP INTELLIGENCE
+    SINGLE FUNCTION QUESTIONS
+    ==================================================
+  */
+
+  if (
+    memory.vehicle &&
+    (
+      lower.includes('1 funcion') ||
+      lower.includes('1 función') ||
+      lower.includes('una funcion') ||
+      lower.includes('una función') ||
+      lower.includes('altas y bajas separadas')
+    )
+  ) {
+
+    return `
+Correcto 👌
+
+Su vehículo usa ${memory.bulb} de 1 función.
+
+Se ocupa:
+✅ un foco para bajas
+✅ otro foco para altas
+
+Las opciones disponibles son:
+
+🔹 COB 2 Caras — $250
+🔹 COB 4 Caras — $350
+🔹 CSP Premium — $500 🔥
+
+¿Cuál le interesa?
+`.trim();
+  }
+
+  /*
+    ==================================================
+    PRODUCT FOLLOW-UP
     ==================================================
   */
 
@@ -161,25 +204,6 @@ Perfecto 👌
 ✅ Plaza Mandarin
 
 📱 686 471 9077
-`.trim();
-  }
-
-  /*
-    ==================================================
-    PRODUCT QUESTIONS WITHOUT VEHICLE
-    ==================================================
-  */
-
-  if (
-    detectedProduct &&
-    !memory.vehicle
-  ) {
-
-    return `
-Claro 👌
-
-Para revisar compatibilidad,
-¿qué año y modelo es su vehículo?
 `.trim();
   }
 
