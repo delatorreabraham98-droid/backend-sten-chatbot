@@ -23,7 +23,10 @@ function similarity(a, b) {
 
   if (a === b) return 1;
 
-  if (a.includes(b) || b.includes(a)) {
+  if (
+    (a.includes(b) || b.includes(a)) &&
+    Math.min(a.length, b.length) >= 3
+  ) {
     return 0.9;
   }
 
