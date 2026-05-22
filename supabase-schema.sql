@@ -1,0 +1,58 @@
+create table if not exists customer_memory (
+
+  id bigint generated always as identity primary key,
+
+  phone text unique not null,
+
+  stage text default 'idle',
+
+  vehicle text,
+
+  selected_product text,
+
+  budget text,
+
+  interested_in text,
+
+  trust_level text default 'medium',
+
+  lead_score integer default 0,
+
+  objections text[] default '{}',
+
+  delivery_type text,
+
+  meeting_point text,
+
+  address text,
+
+  created_at timestamptz default now(),
+
+  updated_at timestamptz default now()
+);
+
+create table if not exists learned_expressions (
+
+  id bigint generated always as identity primary key,
+
+  expression text unique not null,
+
+  detected_intent text,
+
+  created_at timestamptz default now()
+);
+
+create table if not exists conversation_analytics (
+
+  id bigint generated always as identity primary key,
+
+  phone text,
+
+  message text,
+
+  detected_intent text,
+
+  detected_objection text,
+
+  created_at timestamptz default now()
+);
