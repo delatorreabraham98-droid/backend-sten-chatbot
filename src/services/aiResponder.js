@@ -26,6 +26,9 @@ import {
 
 import { sendWhatsAppTextMessage } from "./metaWhatsApp.js";
 import { config } from "../config.js";
+import { logConversationAnalytics } from "./conversationAnalytics.js";
+import { gptFallback } from "./gptFallback.js";
+import { matchLearnedExpression } from "./learnedExpressions.js";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -34,7 +37,7 @@ function getGreeting() {
   return 'Buenas noches';
 }
 
-export async function generateAIReply({
+async function _generateAIReply({
   customerPhone,
   customerName,
   customerMessage
@@ -695,6 +698,50 @@ Si necesita algo más, estoy aquí.
 
   /*
     ==================================================
+    LEARNED EXPRESSIONS — auto-learned patterns
+    ==================================================
+  */
+
+  const learnedMatch = matchLearnedExpression(lower);
+
+  if (learnedMatch) {
+    const intentName = learnedMatch.intent;
+
+    if (intentName === "completed_delivery") {
+      return `
+📍 Podemos entregar en:
+
+✅ Portales
+✅ Juventud 2000
+✅ Costco
+✅ Plaza Mandarin
+
+¿Cuál le queda mejor?
+`.trim();
+    }
+
+    return `
+Entendido 👌
+
+¿En qué más puedo ayudarle?
+`.trim();
+  }
+
+  /*
+    ==================================================
+    GPT FALLBACK — AI-powered intent classification
+    ==================================================
+  */
+
+  if (config.openai.apiKey) {
+    const gptResult = await gptFallback({ message, lower, memory });
+    if (gptResult) {
+      return gptResult.reply;
+    }
+  }
+
+  /*
+    ==================================================
     STICKY SALES CONTEXT — vehicle known, no product
     ==================================================
   */
@@ -736,6 +783,22 @@ ${getGreeting()}
 ¿Cuál es el año y modelo
 de su vehículo?
 `.trim();
+}
+
+async function generateAIReply(params) {
+  const reply = await _generateAIReply(params);
+
+  const isFallback = reply?.includes("¿Cuál es el año y modelo");
+
+  logConversationAnalytics({
+    phone: params.customerPhone,
+    message: params.customerMessage,
+    reply,
+    detectedIntent: isFallback ? "unknown" : "handled",
+    detectedObjection: null
+  }).catch(() => {});
+
+  return reply;
 }
 
 export const generateBotReply = generateAIReply;
