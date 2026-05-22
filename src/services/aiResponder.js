@@ -51,6 +51,25 @@ export async function generateAIReply({
     };
   }
 
+  /*
+    ==================================================
+    /clear COMMAND — reset memory
+    ==================================================
+  */
+
+  if (message === '/clear') {
+    memory.vehicle = null;
+    memory.vehicle_year = null;
+    memory.bulb_low = null;
+    memory.bulb_high = null;
+    memory.bulb_type = null;
+    memory.selected_product = null;
+    memory.conversation_stage = 'new';
+    memory.lead_score = 0;
+    await saveCustomerMemory(customerPhone, memory);
+    return 'Memoria limpiada ✅';
+  }
+
   memory.last_seen_at = new Date().toISOString();
 
   const vehicleInfo = detectVehicleInfo(message);
@@ -354,6 +373,16 @@ Lo esperamos.
 📱 686 471 9077
 `.trim();
     }
+
+    if (memory.conversation_stage === "asked_install_delivery") {
+      return `
+Por favor, especifique:
+
+✅ instalación
+✅ punto medio
+✅ entrega a domicilio
+`.trim();
+    }
   }
 
   /*
@@ -429,6 +458,8 @@ Perfecto 👌
       lower.includes('punto medio')
     )
   ) {
+    memory.conversation_stage = "delivery_selected";
+    await saveCustomerMemory(customerPhone, memory);
 
     return `
 Perfecto 👌
@@ -469,6 +500,38 @@ Las CSP Premium son las mejores 🔥
 ✅ 6 meses garantía
 
 ¿Para qué vehículo las busca?
+`.trim();
+  }
+
+  /*
+    ==================================================
+    ASKED_SCHEDULE — reprompt scheduling question
+    ==================================================
+  */
+
+  if (memory.conversation_stage === "asked_schedule") {
+    return `
+¿Desea agendar hoy?
+
+✅ Sí
+❌ No
+`.trim();
+  }
+
+  /*
+    ==================================================
+    DELIVERY_SELECTED — ask for address
+    ==================================================
+  */
+
+  if (memory.conversation_stage === "delivery_selected") {
+    return `
+Perfecto 👌
+
+Compártanos su dirección
+para coordinar la entrega.
+
+📱 686 471 9077
 `.trim();
   }
 
