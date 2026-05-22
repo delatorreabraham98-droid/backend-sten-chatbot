@@ -5,13 +5,13 @@ export function generateSalesReply(intent) {
     case "confirmation":
 
       return `
-Perfecto.
+Perfecto 👌
 
-En un momento le escribimos
-para coordinar entrega
-o instalación.
+Seguimos con su pedido.
 
-📱 686 471 9077
+¿Desea instalación,
+punto medio
+o entrega a domicilio?
 `.trim();
 
     case "call_question":
@@ -107,13 +107,33 @@ además de durar bastante más.
     case "hesitation":
 
       return `
-Claro.
+Claro 👌
 
 Aquí seguimos a la orden.
 
-Normalmente las premium son
-las que más se terminan llevando
-porque sí hay bastante diferencia.
+Las de $250 son las económicas
+y sí mejoran bastante comparadas
+con halógeno normal.
+`.trim();
+
+    case "vehicle_year_missing":
+
+      return `
+¿Qué año es su vehículo?
+`.trim();
+
+    case "continue_sale":
+
+      return `
+Perfecto 👌
+
+Seguimos con su cotización.
+
+¿Cuál opción le interesa más?
+
+· $250 económica
+· $350 más potencia
+· $500 premium
 `.trim();
 
     default:
