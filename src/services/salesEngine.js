@@ -2,6 +2,48 @@ export function generateSalesReply(intent) {
 
   switch(intent) {
 
+    case "confirmation":
+
+      return `
+Perfecto.
+
+En un momento le escribimos
+para coordinar entrega
+o instalación.
+
+📱 686 471 9077
+`.trim();
+
+    case "call_question":
+
+      return `
+No necesariamente.
+
+También podemos seguir
+por aquí mismo y coordinar
+su instalación o entrega.
+`.trim();
+
+    case "cancel":
+
+      return `
+Claro.
+
+Aquí seguimos a la orden
+por si después le interesa.
+`.trim();
+
+    case "angry_customer":
+
+      return `
+Perdón.
+
+A veces sigo aprendiendo.
+
+Sí podemos ayudarle
+con su instalación o entrega.
+`.trim();
+
     case "negotiation":
 
       return `
