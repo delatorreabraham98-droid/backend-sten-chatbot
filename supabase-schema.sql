@@ -42,6 +42,16 @@ create table if not exists learned_expressions (
   created_at timestamptz default now()
 );
 
+create table if not exists vehicle_bulb_cache (
+  query_text text primary key,
+  low_beam text,
+  high_beam text,
+  fog text,
+  type text,
+  source text,
+  created_at timestamptz default now()
+);
+
 create table if not exists conversation_analytics (
 
   id bigint generated always as identity primary key,

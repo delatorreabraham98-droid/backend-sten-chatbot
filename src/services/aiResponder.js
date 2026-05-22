@@ -16,6 +16,10 @@ import {
 } from "./vehicleEngine.js";
 
 import {
+  webVehicleLookup
+} from "./webVehicleLookup.js";
+
+import {
   buildContinueSaleReply
 } from "./salesEngine.js";
 
@@ -70,6 +74,33 @@ export async function generateAIReply({
     await saveCustomerMemory(customerPhone, memory);
 
     return buildVehicleResponse(vehicleInfo);
+  }
+
+  /*
+    ==================================================
+    WEB VEHICLE LOOKUP — fallback for brands not in DB
+    ==================================================
+  */
+
+  if (!vehicleInfo) {
+    const yearMatch = message.match(/\b(19|20)\d{2}\b/);
+    const year = yearMatch ? yearMatch[0] : null;
+
+    const webResult = await webVehicleLookup({ message, year });
+
+    if (webResult) {
+
+      memory.vehicle = webResult.model;
+      memory.vehicle_year = webResult.year;
+      memory.bulb_low = webResult.lowBeam;
+      memory.bulb_high = webResult.highBeam;
+      memory.bulb_type = webResult.type;
+      memory.conversation_stage = "vehicle_selected";
+
+      await saveCustomerMemory(customerPhone, memory);
+
+      return buildVehicleResponse(webResult);
+    }
   }
 
   /*

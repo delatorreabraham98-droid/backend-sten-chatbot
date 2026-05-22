@@ -20,20 +20,28 @@ Graceful shutdown on SIGTERM/SIGINT (10s forced exit timeout).
 
 ## aiResponder.js — priority chain (DO NOT reorder)
 1. `detectVehicleInfo` → `buildVehicleResponse`
-2. `detectObjection` → `buildObjectionReply`
-3. `memory.vehicle` + "1 función" → 1-function reply
-4. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
-5. `memory.selected_product` + "instalacion" → installation reply
-6. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
-7. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
-8. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
-9. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
-10. fallback → ask year/model
+2. `!detectVehicleInfo` → `webVehicleLookup` (Tavily API, fallback for brands not in DB)
+3. `detectObjection` → `buildObjectionReply`
+4. `memory.vehicle` + "1 función" → 1-function reply
+5. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
+6. `memory.selected_product` + "instalacion" → installation reply
+7. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
+8. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
+9. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
+10. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
+11. fallback → ask year/model
 
 ## Vehicle databases
 6 brand files in `src/data/vehicleDatabase{Brand}.js` (Toyota, Nissan, Honda, Chevrolet, Ford, Mitsubishi).
 Exported as `{BRAND}_DATABASE` objects, merged in `vehicleEngine.js`. Fuzzy match threshold = 0.55.
 `vehicleBulbs.json` is empty — data lives in these JS files only.
+
+### Web vehicle lookup
+When a vehicle is not found in the local databases, `src/services/webVehicleLookup.js` queries the **Tavily** search API (`POST https://api.tavily.com/search`) with an AI-generated answer, extracts bulb codes via regex, and returns structured data matching the vehicle DB format.
+- Requires `TAVILY_API_KEY` in env (1000 free searches/month)
+- In-memory cache (24h TTL) avoids repeated lookups for the same query
+- Guards against non-vehicle messages (year detection + brand keyword triggers)
+- Error-safe: if Tavily fails or returns no bulb codes, falls through to next step in the chain
 
 ## Product catalog (hardcoded)
 | Product | Price |
