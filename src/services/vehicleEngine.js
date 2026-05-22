@@ -106,7 +106,7 @@ export function buildVehicleResponse(vehicle) {
 
   if (sameBulb) {
 
-    response += `🔦 Usa ${vehicle.lowBeam}`;
+    response += `🔦Usa ${vehicle.lowBeam}`;
 
     if (vehicle.type === "dual") {
       response += ` para altas y bajas\n\n`;
@@ -122,14 +122,33 @@ export function buildVehicleResponse(vehicle) {
   }
 
   response += `· COB 2 Caras $250 MXN
-✅ 3 meses garantía
+  6,000 lúmenes
+  ✅ 3 meses de garantía
 
 · COB 4 Caras $350 MXN
-✅ 3 meses garantía
+  12,000 lúmenes
+  ✅ 3 meses de garantía
 
 · CSP Premium $500 MXN
-✅ 6 meses garantía
-⭐ Recomendado
+  20,000 lúmenes
+  ✅ 6 meses de garantía
+⭐ (recomendado)
+
+🔧 Instalación: $100 MXN
+
+📍 De La Torre LED Shop
+📱 686 471 9077
+
+🚗 Entregas:
+✅ Portales
+✅ Juventud 2000
+✅ Costco
+✅ Soriana Anáhuac
+✅ Smart & Final
+✅ Plaza Mandarin
+
+🚘 A domicilio:
+$100 MXN adicionales
 
 ¿Cuál desea?`;
 

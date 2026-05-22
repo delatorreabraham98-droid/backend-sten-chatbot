@@ -64,6 +64,22 @@ export async function generateAIReply({
 
   if (vehicleInfo) {
 
+    if (!vehicleInfo.year) {
+
+      memory.vehicle = vehicleInfo.model;
+      memory.vehicle_year = null;
+      memory.bulb_low = vehicleInfo.lowBeam;
+      memory.bulb_high = vehicleInfo.highBeam;
+      memory.bulb_type = vehicleInfo.type;
+      memory.conversation_stage = "vehicle_selected";
+
+      await saveCustomerMemory(customerPhone, memory);
+
+      return `Buenas tardes
+
+¿Qué año es su ${vehicleInfo.model.toLowerCase()}?`;
+    }
+
     memory.vehicle = vehicleInfo.model;
     memory.vehicle_year = vehicleInfo.year;
     memory.bulb_low = vehicleInfo.lowBeam;
@@ -100,6 +116,35 @@ export async function generateAIReply({
       await saveCustomerMemory(customerPhone, memory);
 
       return buildVehicleResponse(webResult);
+    }
+  }
+
+  /*
+    ==================================================
+    YEAR-ONLY FOLLOW-UP — user gave year after model
+    ==================================================
+  */
+
+  if (
+    !vehicleInfo &&
+    memory.vehicle &&
+    !memory.vehicle_year
+  ) {
+    const yearMatch = message.match(/\b(19|20)\d{2}\b/);
+
+    if (yearMatch) {
+
+      memory.vehicle_year = yearMatch[0];
+
+      await saveCustomerMemory(customerPhone, memory);
+
+      return buildVehicleResponse({
+        model: memory.vehicle,
+        year: memory.vehicle_year,
+        lowBeam: memory.bulb_low,
+        highBeam: memory.bulb_high,
+        type: memory.bulb_type
+      });
     }
   }
 
