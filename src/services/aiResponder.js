@@ -1,6 +1,8 @@
 import {
-  detectSelectedProduct,
-  detectConversationIntent
+  detectProductIntent,
+  buildProductReply,
+  detectObjection,
+  buildObjectionReply
 } from "./intentEngine.js";
 
 import {
@@ -9,7 +11,8 @@ import {
 } from "./supabaseMemory.js";
 
 import {
-  findVehicleBulb
+  detectVehicleInfo,
+  buildVehicleResponse
 } from "./vehicleEngine.js";
 
 import {
@@ -33,7 +36,8 @@ export async function generateAIReply({
       phone: customerPhone,
       customer_name: customerName || "",
       vehicle: null,
-      bulb: null,
+      bulb_low: null,
+      bulb_high: null,
       bulb_type: null,
       selected_product: null,
       conversation_stage: "new",
@@ -44,9 +48,9 @@ export async function generateAIReply({
 
   memory.last_seen_at = new Date().toISOString();
 
-  const detectedProduct = detectSelectedProduct(lower);
-  const conversationalIntent = detectConversationIntent(lower);
-  const vehicleData = findVehicleBulb(message);
+  const vehicleInfo = detectVehicleInfo(message);
+  const productIntent = detectProductIntent(message);
+  const objectionType = detectObjection(message);
 
   /*
     ==================================================
@@ -54,37 +58,27 @@ export async function generateAIReply({
     ==================================================
   */
 
-  if (vehicleData) {
+  if (vehicleInfo) {
 
-    memory.vehicle = vehicleData.vehicle;
-    memory.bulb = vehicleData.bulb;
-    memory.bulb_type = vehicleData.bulbType;
+    memory.vehicle = vehicleInfo.model;
+    memory.bulb_low = vehicleInfo.lowBeam;
+    memory.bulb_high = vehicleInfo.highBeam;
+    memory.bulb_type = vehicleInfo.type;
     memory.conversation_stage = "vehicle_selected";
 
     await saveCustomerMemory(customerPhone, memory);
 
-    const bulbExplanation =
-      vehicleData.bulbType === 'single'
-        ? `🔦 Usa ${vehicleData.bulb} (1 función)\nSe ocupa un foco para bajas y otro para altas`
-        : `🔦 Usa ${vehicleData.bulb} para altas y bajas`;
+    return buildVehicleResponse(vehicleInfo);
+  }
 
-    return `
-[${vehicleData.vehicle}]
+  /*
+    ==================================================
+    OBJECTIONS
+    ==================================================
+  */
 
-${bulbExplanation}
-
-· COB 2 Caras $250 MXN
-  ✅ 3 meses garantía
-
-· COB 4 Caras $350 MXN
-  ✅ 3 meses garantía
-
-· CSP Premium $500 MXN
-  ✅ 6 meses garantía
-⭐ Recomendado
-
-¿Cuál desea?
-`.trim();
+  if (objectionType) {
+    return buildObjectionReply(objectionType);
   }
 
   /*
@@ -107,7 +101,7 @@ ${bulbExplanation}
     return `
 Correcto 👌
 
-Su vehículo usa ${memory.bulb} de 1 función.
+Su vehículo usa ${memory.bulb_low || memory.bulb_high} de 1 función.
 
 Se ocupa:
 ✅ un foco para bajas
@@ -130,26 +124,22 @@ Las opciones disponibles son:
   */
 
   if (
-    detectedProduct &&
+    productIntent &&
     memory.vehicle
   ) {
 
-    memory.selected_product = detectedProduct;
+    memory.selected_product = productIntent.product;
     memory.conversation_stage = "product_selected";
     memory.lead_score += 25;
 
     await saveCustomerMemory(customerPhone, memory);
 
-    return `
-Perfecto 👌
+    const vehicleForReply = {
+      lowBeam: memory.bulb_low,
+      highBeam: memory.bulb_high
+    };
 
-Seleccionó:
-${detectedProduct}
-
-¿Desea instalación,
-punto medio
-o entrega a domicilio?
-`.trim();
+    return buildProductReply(productIntent, vehicleForReply);
   }
 
   /*
