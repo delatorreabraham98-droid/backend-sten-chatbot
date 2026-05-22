@@ -4,11 +4,23 @@ create table if not exists customer_memory (
 
   phone text unique not null,
 
+  customer_name text,
+
   stage text default 'idle',
 
   vehicle text,
 
+  vehicle_year text,
+
+  bulb_low text,
+
+  bulb_high text,
+
+  bulb_type text,
+
   selected_product text,
+
+  conversation_stage text default 'new',
 
   budget text,
 
@@ -25,6 +37,8 @@ create table if not exists customer_memory (
   meeting_point text,
 
   address text,
+
+  last_seen_at timestamptz default now(),
 
   created_at timestamptz default now(),
 
