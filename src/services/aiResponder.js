@@ -228,7 +228,7 @@ Las CSP Premium son las mejores 🔥
 
   /*
     ==================================================
-    STICKY SALES CONTEXT
+    STICKY SALES CONTEXT — vehicle known, no product
     ==================================================
   */
 
@@ -238,6 +238,29 @@ Las CSP Premium son las mejores 🔥
   ) {
 
     return buildContinueSaleReply();
+  }
+
+  /*
+    ==================================================
+    STICKY SALES CONTEXT — product already selected
+    ==================================================
+  */
+
+  if (
+    memory.vehicle &&
+    memory.selected_product
+  ) {
+
+    return `
+Seguimos con su pedido 👌
+
+${memory.selected_product}
+
+¿Desea:
+✅ instalación
+✅ punto medio
+✅ entrega a domicilio?
+`.trim();
   }
 
   return `

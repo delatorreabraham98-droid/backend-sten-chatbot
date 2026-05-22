@@ -27,7 +27,8 @@ Graceful shutdown on SIGTERM/SIGINT (10s forced exit timeout).
 6. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
 7. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
 8. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
-9. fallback → ask year/model
+9. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
+10. fallback → ask year/model
 
 ## Vehicle databases
 6 brand files in `src/data/vehicleDatabase{Brand}.js` (Toyota, Nissan, Honda, Chevrolet, Ford, Mitsubishi).
