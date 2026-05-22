@@ -27,6 +27,13 @@ import {
 import { sendWhatsAppTextMessage } from "./metaWhatsApp.js";
 import { config } from "../config.js";
 
+function getGreeting() {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Buenos días';
+  if (hour < 18) return 'Buenas tardes';
+  return 'Buenas noches';
+}
+
 export async function generateAIReply({
   customerPhone,
   customerName,
@@ -98,7 +105,7 @@ export async function generateAIReply({
 
       await saveCustomerMemory(customerPhone, memory);
 
-      return `Buenas tardes
+      return `${getGreeting()}
 
 ¿Qué año es su ${vehicleInfo.model.toLowerCase()}?`;
     }
@@ -546,7 +553,8 @@ En un momento recibirá una llamada para confirmar lugar y hora de entrega.
     (
       lower.includes('domicilio') ||
       lower.includes('envio') ||
-      lower.includes('envío')
+      lower.includes('envío') ||
+      lower.includes('entrega')
     )
   ) {
     memory.conversation_stage = "delivery_selected";
@@ -723,7 +731,7 @@ ${memory.selected_product}
   }
 
   return `
-Buenas tardes
+${getGreeting()}
 
 ¿Cuál es el año y modelo
 de su vehículo?
