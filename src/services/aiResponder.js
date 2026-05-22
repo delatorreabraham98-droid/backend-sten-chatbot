@@ -3,6 +3,7 @@ import fs from "fs/promises";
 import path from "path";
 
 import { config } from "../config.js";
+
 import {
   detectSelectedProduct,
   detectConversationIntent
@@ -12,12 +13,17 @@ import {
   generateSalesReply
 } from "./salesEngine.js";
 
+import {
+  getCustomerMemory,
+  saveCustomerMemory,
+  increaseLeadScore
+} from "./supabaseMemory.js";
+
 const openai = new OpenAI({
   apiKey: config.openai.apiKey
 });
 
 const DB_PATH = path.resolve("./vehicleBulbs.json");
-const conversationMemory = new Map();
 
 const knownVehicles = {
   "ford focus 2002": {
@@ -35,11 +41,8 @@ async function loadVehicleDatabase() {
   }
 }
 
-async function saveVehicleDatabase(data) {
-  await fs.writeFile(DB_PATH,JSON.stringify(data,null,2),"utf8");
-}
-
 function normalizeVehicleName(vehicle) {
+
   let normalized = vehicle.toLowerCase();
 
   if (
@@ -68,20 +71,6 @@ function detectVehicle(message) {
     return {
       complete: true,
       vehicle: `${model} ${year}`
-    };
-  }
-
-  if (model && !year) {
-    return {
-      complete: false,
-      model
-    };
-  }
-
-  if (year && !model) {
-    return {
-      complete: false,
-      year
     };
   }
 
@@ -139,13 +128,12 @@ export async function generateBotReply({
 
   const conversationId = customerPhone || "default";
 
-  const memory = conversationMemory.get(conversationId) || {
-    stage: "idle"
-  };
+  const memory = await getCustomerMemory(conversationId);
 
   const conversationalIntent = detectConversationIntent(customerMessage);
 
   if (conversationalIntent) {
+
     return generateSalesReply(conversationalIntent);
   }
 
@@ -153,14 +141,48 @@ export async function generateBotReply({
 
     const text = customerMessage.toLowerCase();
 
-    if (
+    const wantsInstallation =
       text.includes("instalacion") ||
-      text.includes("instalación")
+      text.includes("instalación");
+
+    const wantsDelivery =
+      text.includes("domicilio");
+
+    const wantsMeetingPoint =
+      text.includes("punto") ||
+      text.includes("medio");
+
+    if (
+      wantsInstallation &&
+      wantsDelivery
     ) {
 
-      conversationMemory.set(conversationId, {
+      await saveCustomerMemory(conversationId, {
         ...memory,
-        stage: "completed"
+        stage: "awaiting_address",
+        delivery_type: "domicilio",
+        installation: true
+      });
+
+      await increaseLeadScore(conversationId,20);
+
+      return `
+Perfecto.
+
+La instalación a domicilio
+tiene costo adicional
+de $100 MXN.
+
+¿En qué colonia se encuentra?
+`.trim();
+    }
+
+    if (wantsInstallation) {
+
+      await saveCustomerMemory(conversationId, {
+        ...memory,
+        stage: "completed",
+        installation: true
       });
 
       return `
@@ -173,12 +195,9 @@ de $100 MXN.
 `.trim();
     }
 
-    if (
-      text.includes("punto") ||
-      text.includes("medio")
-    ) {
+    if (wantsMeetingPoint) {
 
-      conversationMemory.set(conversationId, {
+      await saveCustomerMemory(conversationId, {
         ...memory,
         stage: "awaiting_meeting_point"
       });
@@ -197,13 +216,12 @@ Perfecto.
 `.trim();
     }
 
-    if (
-      text.includes("domicilio")
-    ) {
+    if (wantsDelivery) {
 
-      conversationMemory.set(conversationId, {
+      await saveCustomerMemory(conversationId, {
         ...memory,
-        stage: "awaiting_address"
+        stage: "awaiting_address",
+        delivery_type: "domicilio"
       });
 
       return `
@@ -218,12 +236,32 @@ de $100 MXN.
     }
   }
 
-  if (memory.stage === "awaiting_meeting_point") {
+  if (memory.stage === "awaiting_address") {
 
-    conversationMemory.set(conversationId, {
+    await saveCustomerMemory(conversationId, {
       ...memory,
       stage: "completed",
-      meetingPoint: customerMessage
+      address: customerMessage
+    });
+
+    return `
+Perfecto.
+
+📍 Dirección guardada.
+
+En un momento le confirmamos
+su instalación o entrega.
+
+📱 686 471 9077
+`.trim();
+  }
+
+  if (memory.stage === "awaiting_meeting_point") {
+
+    await saveCustomerMemory(conversationId, {
+      ...memory,
+      stage: "completed",
+      meeting_point: customerMessage
     });
 
     return `
@@ -236,26 +274,24 @@ ${customerMessage}
 ${memory.vehicle}
 
 🔦 Producto:
-${memory.selectedProduct}
+${memory.selected_product}
 
 En un momento
 le confirmamos horario.
-
-📱 686 471 9077
 `.trim();
   }
 
-  const wantsPurchase = customerMessage.toLowerCase().includes("quiero");
+  const selectedProduct = detectSelectedProduct(customerMessage);
 
-  if (wantsPurchase && memory?.vehicle) {
+  if (selectedProduct && memory?.vehicle) {
 
-    const selectedProduct = detectSelectedProduct(customerMessage);
-
-    conversationMemory.set(conversationId, {
+    await saveCustomerMemory(conversationId, {
       ...memory,
       stage: "awaiting_delivery_type",
-      selectedProduct
+      selected_product: selectedProduct
     });
+
+    await increaseLeadScore(conversationId,15);
 
     return `
 Perfecto.
@@ -277,10 +313,13 @@ o entrega a domicilio?
 
     const vehicleInfo = await getVehicleInfo(vehicle);
 
-    conversationMemory.set(conversationId, {
+    await saveCustomerMemory(conversationId, {
+      ...memory,
       vehicle,
       stage: "quoted"
     });
+
+    await increaseLeadScore(conversationId,10);
 
     return buildVehicleReply({
       vehicle,
