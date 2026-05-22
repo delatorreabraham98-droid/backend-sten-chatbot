@@ -41,6 +41,9 @@ function similarity(a, b) {
 
 function findVehicleModel(message) {
   const normalized = normalize(message);
+  const words = normalized.split(/\s+/).filter(w => w.length > 0);
+
+  if (words.length === 0) return null;
 
   let bestMatch = null;
   let bestScore = 0;
@@ -50,15 +53,21 @@ function findVehicleModel(message) {
     const aliases = [model, ...(data.aliases || [])];
 
     for (const alias of aliases) {
+      const normalizedAlias = normalize(alias);
+      if (!normalizedAlias) continue;
 
-      const score = similarity(normalized, alias);
+      for (const word of words) {
+        if (word[0] !== normalizedAlias[0]) continue;
 
-      if (score > bestScore) {
-        bestScore = score;
-        bestMatch = {
-          model,
-          data
-        };
+        const score = similarity(word, normalizedAlias);
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestMatch = {
+            model,
+            data
+          };
+        }
       }
     }
   }
