@@ -61,6 +61,7 @@ export async function generateAIReply({
   if (vehicleInfo) {
 
     memory.vehicle = vehicleInfo.model;
+    memory.vehicle_year = vehicleInfo.year;
     memory.bulb_low = vehicleInfo.lowBeam;
     memory.bulb_high = vehicleInfo.highBeam;
     memory.bulb_type = vehicleInfo.type;
@@ -204,10 +205,13 @@ Perfecto 👌
   */
 
   if (
-    lower.includes('las buenas') ||
-    lower.includes('premium') ||
-    lower.includes('mejores') ||
-    lower.includes('chafas')
+    !memory.vehicle &&
+    (
+      lower.includes('las buenas') ||
+      lower.includes('premium') ||
+      lower.includes('mejores') ||
+      lower.includes('chafas')
+    )
   ) {
 
     return `

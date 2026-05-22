@@ -7,37 +7,39 @@ const supabase = createClient(
 
 export async function getCustomerMemory(phone) {
 
-  const { data } = await supabase
+  const { data, error } = await supabase
     .from("customer_memory")
     .select("*")
     .eq("phone", phone)
-    .single();
+    .maybeSingle();
 
-  return data || {
-    phone,
-    stage: "idle",
-    budget: null,
-    interested_in: null,
-    objections: [],
-    trust_level: "medium",
-    lead_score: 0
-  };
+  if (error && error.code !== "PGRST116") {
+    console.error("getCustomerMemory error:", error);
+  }
+
+  return data || null;
 }
 
 export async function saveCustomerMemory(phone, memory) {
 
-  await supabase
+  const { error } = await supabase
     .from("customer_memory")
     .upsert({
-      phone,
       ...memory,
+      phone,
       updated_at: new Date().toISOString()
     });
+
+  if (error) {
+    console.error("saveCustomerMemory error:", error);
+  }
 }
 
 export async function addCustomerObjection(phone, objection) {
 
   const memory = await getCustomerMemory(phone);
+
+  if (!memory) return;
 
   const objections = [
     ...(memory.objections || []),
@@ -53,6 +55,8 @@ export async function addCustomerObjection(phone, objection) {
 export async function increaseLeadScore(phone, amount = 10) {
 
   const memory = await getCustomerMemory(phone);
+
+  if (!memory) return;
 
   await saveCustomerMemory(phone, {
     ...memory,

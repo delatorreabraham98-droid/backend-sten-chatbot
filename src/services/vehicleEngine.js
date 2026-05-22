@@ -3,13 +3,15 @@ import { NISSAN_DATABASE } from "../data/vehicleDatabaseNissan.js";
 import { HONDA_DATABASE } from "../data/vehicleDatabaseHonda.js";
 import { CHEVROLET_DATABASE } from "../data/vehicleDatabaseChevrolet.js";
 import { FORD_DATABASE } from "../data/vehicleDatabaseFord.js";
+import { MITSUBISHI_DATABASE } from "../data/vehicleDatabaseMitsubishi.js";
 
 const DATABASE = {
   ...TOYOTA_DATABASE,
   ...NISSAN_DATABASE,
   ...HONDA_DATABASE,
   ...CHEVROLET_DATABASE,
-  ...FORD_DATABASE
+  ...FORD_DATABASE,
+  ...MITSUBISHI_DATABASE
 };
 
 function normalize(text = "") {
@@ -79,8 +81,12 @@ export function detectVehicleInfo(message) {
     return null;
   }
 
+  const yearMatch = message.match(/\b(19|20)\d{2}\b/);
+  const year = yearMatch ? yearMatch[0] : null;
+
   return {
     model: found.model.toUpperCase(),
+    year,
     lowBeam: found.data.lowBeam,
     highBeam: found.data.highBeam,
     fog: found.data.fog,
@@ -95,7 +101,11 @@ export function buildVehicleResponse(vehicle) {
   const sameBulb =
     vehicle.lowBeam === vehicle.highBeam;
 
-  let response = `🚘 [${vehicle.model}]\n\n`;
+  const modelDisplay = vehicle.year
+    ? `${vehicle.model} ${vehicle.year}`
+    : vehicle.model;
+
+  let response = `🚘 [${modelDisplay}]\n\n`;
 
   if (sameBulb) {
 
