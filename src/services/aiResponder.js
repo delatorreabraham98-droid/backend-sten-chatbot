@@ -251,6 +251,8 @@ Las opciones disponibles son:
           : `✅ Bajas: ${memory.bulb_low} | Altas: ${memory.bulb_high}`;
 
         if (memory.selected_product) {
+          memory.conversation_stage = "product_selected";
+          await saveCustomerMemory(customerPhone, memory);
           const productPrices = {
             COB_2_CARAS: 250,
             COB_4_CARAS: 350,
@@ -326,7 +328,10 @@ Opciones disponibles:
     )
   ) {
 
-    return `
+    if (memory.conversation_stage === "product_selected") {
+      memory.conversation_stage = "asked_install_delivery";
+      await saveCustomerMemory(customerPhone, memory);
+      return `
 Perfecto 👌
 
 ${memory.selected_product}
@@ -336,6 +341,19 @@ ${memory.selected_product}
 ✅ punto medio
 ✅ entrega a domicilio?
 `.trim();
+    }
+
+    if (memory.conversation_stage === "asked_schedule") {
+      memory.conversation_stage = "completed";
+      await saveCustomerMemory(customerPhone, memory);
+      return `
+Perfecto 👌
+
+Lo esperamos.
+
+📱 686 471 9077
+`.trim();
+    }
   }
 
   /*
@@ -381,6 +399,9 @@ Si necesita algo más, estoy aquí.
       lower.includes('instalación')
     )
   ) {
+
+    memory.conversation_stage = "asked_schedule";
+    await saveCustomerMemory(customerPhone, memory);
 
     return `
 Perfecto 👌
