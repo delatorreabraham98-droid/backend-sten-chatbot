@@ -37,6 +37,46 @@ const knownVehicles = {
   }
 };
 
+const vehicleBrands = [
+  "hummer",
+  "toyota",
+  "ford",
+  "chevrolet",
+  "chevy",
+  "honda",
+  "nissan",
+  "mazda",
+  "mitsubishi",
+  "bmw",
+  "audi",
+  "mercedes",
+  "kia",
+  "hyundai"
+];
+
+const vehicleModels = [
+  "focus",
+  "civic",
+  "lancer",
+  "sentra",
+  "corolla",
+  "accord",
+  "altima",
+  "jetta",
+  "fusion",
+  "escape",
+  "camry",
+  "h3",
+  "silverado",
+  "tacoma",
+  "rav4",
+  "crv",
+  "explorer",
+  "ram",
+  "malibu",
+  "sierra"
+];
+
 async function loadVehicleDatabase() {
   try {
     const file = await fs.readFile(DB_PATH,"utf8");
@@ -68,14 +108,21 @@ function detectVehicle(message) {
 
   const year = yearMatch ? yearMatch[0] : null;
 
-  const modelMatch = clean.match(/\b(focus|civic|lancer|sentra|corolla|accord|altima|jetta|fusion|escape)\b/i);
+  const foundBrand = vehicleBrands.find(
+    brand => clean.includes(brand)
+  );
 
-  const model = modelMatch ? modelMatch[0] : null;
+  const foundModel = vehicleModels.find(
+    model => clean.includes(model)
+  );
 
-  if (model && year) {
+  if (year && (foundBrand || foundModel)) {
+
     return {
       complete: true,
-      vehicle: `${model} ${year}`
+      vehicle: `${foundBrand || ""} ${foundModel || ""} ${year}`
+        .replace(/\s+/g," ")
+        .trim()
     };
   }
 
