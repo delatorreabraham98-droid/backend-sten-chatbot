@@ -19,6 +19,11 @@ import {
   increaseLeadScore
 } from "./supabaseMemory.js";
 
+import {
+  createLead,
+  createQuote
+} from "./base44Service.js";
+
 const openai = new OpenAI({
   apiKey: config.openai.apiKey
 });
@@ -166,6 +171,13 @@ export async function generateBotReply({
 
       await increaseLeadScore(conversationId,20);
 
+      await createQuote({
+        phone: conversationId,
+        vehicle: memory.vehicle,
+        product: memory.selected_product,
+        delivery_type: "domicilio + instalación"
+      });
+
       return `
 Perfecto.
 
@@ -292,6 +304,13 @@ le confirmamos horario.
     });
 
     await increaseLeadScore(conversationId,15);
+
+    await createLead({
+      phone: conversationId,
+      vehicle: memory.vehicle,
+      product: selectedProduct,
+      lead_score: (memory.lead_score || 0) + 15
+    });
 
     return `
 Perfecto.
