@@ -716,9 +716,9 @@ Seguimos con su pedido 👌
 ${memory.selected_product}
 
 ¿Desea:
-✅ instalación
-✅ punto medio
-✅ entrega a domicilio?
+✅ Instalación
+✅ Entrega en punto medio
+✅ Entrega a domicilio?
 `.trim();
   }
 
