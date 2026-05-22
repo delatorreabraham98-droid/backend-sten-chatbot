@@ -321,6 +321,36 @@ ${memory.selected_product}
 
   /*
     ==================================================
+    NEGATIVE RESPONSE AFTER PRODUCT SELECTION
+    ==================================================
+  */
+
+  if (
+    memory.selected_product &&
+    (
+      lower === 'no' ||
+      lower.startsWith('no ') ||
+      lower.includes('no gracias') ||
+      lower.includes('no quiero')
+    )
+  ) {
+
+    memory.selected_product = null;
+    memory.conversation_stage = "vehicle_selected";
+
+    await saveCustomerMemory(customerPhone, memory);
+
+    return `
+Entendido 👌
+
+Si necesita algo más, estoy aquí.
+
+📱 686 471 9077
+`.trim();
+  }
+
+  /*
+    ==================================================
     INSTALLATION
     ==================================================
   */

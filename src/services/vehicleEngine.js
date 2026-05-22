@@ -63,14 +63,14 @@ function findVehicleModel(message) {
     }
   }
 
-  if (bestScore >= 0.55) {
+  if (bestScore >= 0.65) {
     return bestMatch;
   }
 
   return null;
 }
 
-const GREETING_RE = /\b(buen[ao]s|hola|saludos|que tal|qué tal)\b/i;
+const GREETING_RE = /\b(buen[ao]s|hola|saludos|que tal|qué tal|gracias|no quiero|ya no|de que hablas|de qué hablas)\b/i;
 
 function isGreetingOnly(message) {
   const words = message.trim().split(/\s+/);
