@@ -12,12 +12,12 @@ const VEHICLE_DATABASE = {
     type: 'single'
   },
   corolla: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   civic: {
-    bulb: '9006',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   accord: {
     bulb: 'H11',
@@ -28,32 +28,32 @@ const VEHICLE_DATABASE = {
     type: 'dual'
   },
   altima: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   silverado: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   sierra: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   tacoma: {
     bulb: 'H11',
     type: 'single'
   },
   rav4: {
-    bulb: 'H11',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   crv: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   explorer: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   fusion: {
     bulb: 'H11',
@@ -72,8 +72,8 @@ const VEHICLE_DATABASE = {
     type: 'single'
   },
   ram: {
-    bulb: '9005',
-    type: 'single'
+    bulb: '9005 / 9006',
+    type: 'split'
   },
   h3: {
     bulb: 'H4',
