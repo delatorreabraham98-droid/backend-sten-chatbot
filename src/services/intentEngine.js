@@ -30,7 +30,39 @@ export function detectSelectedProduct(message) {
 
 export function detectConversationIntent(message) {
 
-  const text = message.toLowerCase();
+  const text = message.toLowerCase().trim();
+
+  if (
+    text.includes("ya no quiero") ||
+    text.includes("no gracias") ||
+    text.includes("ya mejor no")
+  ) {
+    return "cancel";
+  }
+
+  if (
+    text === "ok" ||
+    text === "sale" ||
+    text === "perfecto" ||
+    text === "gracias"
+  ) {
+    return "confirmation";
+  }
+
+  if (
+    text.includes("tengo que llamar") ||
+    text.includes("como sigue") ||
+    text.includes("que sigue")
+  ) {
+    return "call_question";
+  }
+
+  if (
+    text.includes("grosero") ||
+    text.includes("mal servicio")
+  ) {
+    return "angry_customer";
+  }
 
   if (
     text.includes("estan caras") ||
