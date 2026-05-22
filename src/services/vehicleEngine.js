@@ -1,34 +1,97 @@
-const KNOWN_BULBS = {
-  focus: 'H4',
-  lancer: 'H4',
-  camry: 'H11',
-  corolla: '9005',
-  civic: '9006',
-  accord: 'H11',
-  sentra: 'H4',
-  altima: '9005',
-  silverado: '9005',
-  sierra: '9005',
-  tacoma: 'H11',
-  rav4: 'H11',
-  crv: '9005',
-  explorer: '9005',
-  fusion: 'H11',
-  escape: 'H11',
-  malibu: 'H11',
-  jetta: 'H7',
-  ram: '9005',
-  h3: 'H4'
+const VEHICLE_DATABASE = {
+  focus: {
+    bulb: 'H4',
+    type: 'dual'
+  },
+  lancer: {
+    bulb: 'H4',
+    type: 'dual'
+  },
+  camry: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  corolla: {
+    bulb: '9005',
+    type: 'single'
+  },
+  civic: {
+    bulb: '9006',
+    type: 'single'
+  },
+  accord: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  sentra: {
+    bulb: 'H4',
+    type: 'dual'
+  },
+  altima: {
+    bulb: '9005',
+    type: 'single'
+  },
+  silverado: {
+    bulb: '9005',
+    type: 'single'
+  },
+  sierra: {
+    bulb: '9005',
+    type: 'single'
+  },
+  tacoma: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  rav4: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  crv: {
+    bulb: '9005',
+    type: 'single'
+  },
+  explorer: {
+    bulb: '9005',
+    type: 'single'
+  },
+  fusion: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  escape: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  malibu: {
+    bulb: 'H11',
+    type: 'single'
+  },
+  jetta: {
+    bulb: 'H7',
+    type: 'single'
+  },
+  ram: {
+    bulb: '9005',
+    type: 'single'
+  },
+  h3: {
+    bulb: 'H4',
+    type: 'dual'
+  },
+  sonata: {
+    bulb: 'H11',
+    type: 'single'
+  }
 };
 
-const VEHICLE_MODELS = Object.keys(KNOWN_BULBS);
+const VEHICLE_MODELS = Object.keys(VEHICLE_DATABASE);
 
 export function findVehicleBulb(message = '') {
 
   const text = message.toLowerCase().trim();
 
   const yearMatch = text.match(/\b(19|20)\d{2}\b/);
-
   const year = yearMatch ? yearMatch[0] : null;
 
   let detectedModel = null;
@@ -44,12 +107,13 @@ export function findVehicleBulb(message = '') {
     return null;
   }
 
-  const bulb = KNOWN_BULBS[detectedModel] || 'H4';
+  const vehicleData = VEHICLE_DATABASE[detectedModel];
 
   const formattedVehicle = `${detectedModel.toUpperCase()} ${year || ''}`.trim();
 
   return {
     vehicle: formattedVehicle,
-    bulb
+    bulb: vehicleData.bulb,
+    bulbType: vehicleData.type
   };
 }
