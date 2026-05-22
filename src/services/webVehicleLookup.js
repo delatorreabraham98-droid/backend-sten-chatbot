@@ -66,12 +66,17 @@ function extractModel(message, year) {
 function looksLikeVehicleMessage(message) {
   if (message.length < 4) return false;
 
-  if (/\b(19|20)\d{2}\b/.test(message)) return true;
-
-  const triggers = ["mazda", "hyundai", "kia", "volkswagen", "vw", "renault", "suzuki", "seat", "bmw", "mercedes", "audi", "subaru", "jeep", "chrysler", "dodge", "peugeot", "fiat", "mini", "smart", "acura", "lexus", "infiniti", "toyota", "nissan", "honda", "chevrolet", "ford", "mitsubishi"];
-
   const lower = message.toLowerCase();
-  return triggers.some(b => lower.includes(b));
+  const hasYear = /\b(19|20)\d{2}\b/.test(message);
+  const triggers = ["mazda", "hyundai", "kia", "volkswagen", "vw", "renault", "suzuki", "seat", "bmw", "mercedes", "audi", "subaru", "jeep", "chrysler", "dodge", "peugeot", "fiat", "mini", "smart", "acura", "lexus", "infiniti", "toyota", "nissan", "honda", "chevrolet", "ford", "mitsubishi"];
+  const hasBrand = triggers.some(b => lower.includes(b));
+
+  if (hasYear && !hasBrand) {
+    const stripped = message.replace(/\b(19|20)\d{2}\b/g, "").replace(/[^a-záéíóúñ\s]/gi, "").trim();
+    if (!stripped || stripped.length < 2) return false;
+  }
+
+  return hasYear || hasBrand;
 }
 
 function getCacheKey(message) {

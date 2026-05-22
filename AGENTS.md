@@ -20,17 +20,18 @@ Graceful shutdown on SIGTERM/SIGINT (10s forced exit timeout).
 
 ## aiResponder.js — priority chain (DO NOT reorder)
 1. `detectVehicleInfo` → `buildVehicleResponse`
-2. `!detectVehicleInfo` → `webVehicleLookup` (Tavily API, fallback for brands not in DB)
-3. `detectObjection` → `buildObjectionReply`
-4. `memory.vehicle` + "1 función" → 1-function reply
-5. `memory.vehicle` + "usa/ocupa/lleva [bulb]" → bulb code correction (updates memory)
-6. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
-7. `memory.selected_product` + "instalacion" → installation reply
-8. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
-9. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
-10. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
-11. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
-12. fallback → ask year/model
+2. `!detectVehicleInfo` → `hasYearOnly` guard (if year-only + memory.vehicle → complete response; if year-only + !memory.vehicle → ask model; otherwise skip Tavily fallback)
+3. `!detectVehicleInfo` → `webVehicleLookup` (Tavily API, fallback for brands not in DB)
+4. `detectObjection` → `buildObjectionReply`
+5. `memory.vehicle` + "1 función" → 1-function reply
+6. `memory.vehicle` + "usa/ocupa/lleva [bulb]" → bulb code correction (updates memory)
+7. `detectProductIntent` + `memory.vehicle` → `buildProductReply`
+8. `memory.selected_product` + "instalacion" → installation reply
+9. `memory.selected_product` + "domicilio/envio/punto medio" → delivery reply
+10. `!memory.vehicle` + "premium/mejores/chafas" → premium info + ask vehicle
+11. `memory.vehicle` + `!memory.selected_product` → `buildContinueSaleReply`
+12. `memory.vehicle` + `memory.selected_product` → ask installation/delivery
+13. fallback → ask year/model
 
 ## Vehicle databases
 6 brand files in `src/data/vehicleDatabase{Brand}.js` (Toyota, Nissan, Honda, Chevrolet, Ford, Mitsubishi).

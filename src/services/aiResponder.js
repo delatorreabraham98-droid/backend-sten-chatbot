@@ -12,7 +12,8 @@ import {
 
 import {
   detectVehicleInfo,
-  buildVehicleResponse
+  buildVehicleResponse,
+  hasYearOnly
 } from "./vehicleEngine.js";
 
 import {
@@ -99,6 +100,24 @@ export async function generateAIReply({
   */
 
   if (!vehicleInfo) {
+    const yearOnly = hasYearOnly(message);
+
+    if (yearOnly) {
+      if (memory.vehicle) {
+        memory.vehicle_year = yearOnly;
+        memory.conversation_stage = "vehicle_selected";
+        await saveCustomerMemory(customerPhone, memory);
+        return buildVehicleResponse({
+          model: memory.vehicle,
+          year: yearOnly,
+          lowBeam: memory.bulb_low,
+          highBeam: memory.bulb_high,
+          type: memory.bulb_type
+        });
+      }
+      return `¿Qué modelo?`;
+    }
+
     const yearMatch = message.match(/\b(19|20)\d{2}\b/);
     const year = yearMatch ? yearMatch[0] : null;
 

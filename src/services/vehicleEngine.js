@@ -110,6 +110,33 @@ export function detectVehicleInfo(message) {
   };
 }
 
+const YEAR_RE = /\b(19|20)\d{2}\b/;
+
+export function hasYearOnly(message) {
+  const year = message.match(YEAR_RE);
+  if (!year) return null;
+
+  const rest = message
+    .replace(YEAR_RE, "")
+    .replace(/[^a-záéíóúñ\s]/gi, "")
+    .toLowerCase()
+    .trim();
+
+  if (!rest) return year[0];
+
+  const words = rest.split(/\s+/).filter(Boolean);
+  const filler = new Set([
+    "año", "el", "la", "los", "las", "de", "del", "es", "mi", "tu",
+    "su", "un", "una", "en", "con", "para", "que", "se", "le", "lo",
+    "no", "si", "por", "al"
+  ]);
+
+  const hasMeaningful = words.some(w => w.length >= 2 && !filler.has(w));
+  if (!hasMeaningful) return year[0];
+
+  return null;
+}
+
 export function buildVehicleResponse(vehicle) {
 
   if (!vehicle) return null;
