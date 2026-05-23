@@ -26,7 +26,11 @@ export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
   }
 
   if (!channel) {
-    throw new Error("No active WhatsApp channel found");
+    throw new Error(
+      `No active WhatsApp channel found for phone_number_id ${phoneNumberId}. ` +
+      `Create a Channel record in Base44 with phone_number_id="${phoneNumberId}", type="whatsapp", status="active", ` +
+      `and ensure it links to an existing Client and Bot record.`
+    );
   }
 
   const [client, bot, knowledgeItems] = await Promise.all([
