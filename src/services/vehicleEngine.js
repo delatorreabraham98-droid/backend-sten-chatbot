@@ -15,6 +15,10 @@ const DATABASE = {
   ...MITSUBISHI_DATABASE
 };
 
+const IGNORED_WORDS = new Set([
+  "altas", "bajas", "premium"
+]);
+
 function similarity(a, b) {
   a = normalize(a);
   b = normalize(b);
@@ -30,13 +34,25 @@ function similarity(a, b) {
     return 0.9;
   }
 
-  let matches = 0;
+  const bigrams = (s) => {
+    const set = new Set();
+    for (let i = 0; i < s.length - 1; i++) {
+      set.add(s.slice(i, i + 2));
+    }
+    return set;
+  };
 
-  for (const char of a) {
-    if (b.includes(char)) matches++;
+  const bigramsA = bigrams(a);
+  const bigramsB = bigrams(b);
+
+  if (bigramsA.size === 0 || bigramsB.size === 0) return 0;
+
+  let intersection = 0;
+  for (const bigram of bigramsA) {
+    if (bigramsB.has(bigram)) intersection++;
   }
 
-  return matches / Math.max(a.length, b.length);
+  return (2 * intersection) / (bigramsA.size + bigramsB.size);
 }
 
 function findVehicleModel(message) {
@@ -57,6 +73,7 @@ function findVehicleModel(message) {
       if (!normalizedAlias) continue;
 
       for (const word of words) {
+        if (IGNORED_WORDS.has(word)) continue;
         if (word[0] !== normalizedAlias[0]) continue;
 
         const score = similarity(word, normalizedAlias);
@@ -72,7 +89,7 @@ function findVehicleModel(message) {
     }
   }
 
-  if (bestScore >= 0.65) {
+  if (bestScore >= 0.70) {
     return bestMatch;
   }
 

@@ -85,7 +85,7 @@ async function _generateAIReply({
 
   memory.last_seen_at = new Date().toISOString();
 
-  const vehicleInfo = detectVehicleInfo(message);
+  const vehicleInfo = memory.vehicle ? null : detectVehicleInfo(message);
   const productIntent = detectProductIntent(message);
   const objectionType = detectObjection(message);
 
