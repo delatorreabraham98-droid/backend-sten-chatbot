@@ -11,9 +11,22 @@ export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
     limit: 1
   });
 
-  const channel = channels[0];
+  let channel = channels[0];
+
   if (!channel) {
-    throw new Error(`No active WhatsApp channel found for phone_number_id ${phoneNumberId}`);
+    const fallbackChannels = await listEntity("Channel", {
+      q: {
+        type: "whatsapp",
+        status: "active"
+      },
+      limit: 1
+    });
+
+    channel = fallbackChannels[0];
+  }
+
+  if (!channel) {
+    throw new Error("No active WhatsApp channel found");
   }
 
   const [client, bot, knowledgeItems] = await Promise.all([
