@@ -258,7 +258,12 @@ Las opciones disponibles son:
 
     if (verbMatch) {
       const restAfterVerb = lower.slice(verbMatch[0].length);
-      const bulbMatch = restAfterVerb.match(bulbPattern);
+      let bulbMatch = restAfterVerb.match(bulbPattern);
+
+      if (!bulbMatch && /\b(?:es|son)\b/.test(verbMatch[0])) {
+        const beforeVerb = lower.slice(0, verbMatch.index).trim();
+        if (beforeVerb) bulbMatch = beforeVerb.match(bulbPattern);
+      }
 
       if (bulbMatch) {
         const code = bulbMatch[1].toUpperCase();
@@ -738,6 +743,22 @@ Entendido 👌
     if (gptResult) {
       return gptResult.reply;
     }
+  }
+
+  /*
+    ==================================================
+    GREETING / TIME-OF-DAY — acknowledge when vehicle known
+    ==================================================
+  */
+
+  const greetingPattern = /\b(buen[ao]s|hola|saludos)\b/i;
+  const timePattern = /es de (dia|día|tarde|noche)/i;
+
+  if (
+    memory.vehicle &&
+    (greetingPattern.test(message) || timePattern.test(message))
+  ) {
+    return `${getGreeting()} 👋`;
   }
 
   /*
