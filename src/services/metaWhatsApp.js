@@ -32,6 +32,8 @@ export async function sendWhatsAppTextMessage({ to, body }) {
 
   if (!response.ok) {
     const detail = payload?.error?.message || "Meta rejected the message";
+    const code = payload?.error?.code || response.status;
+    console.error("Meta API error", { code, message: detail, full: payload });
     throw new Error(detail);
   }
 
