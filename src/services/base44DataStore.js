@@ -55,7 +55,56 @@ export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
   };
 }
 
-export async function findOrCreateConversation({ channel, message }) {
+export async function getRuntimeContextForMessenger({ pageId }) {
+  const channels = await listEntity("Channel", {
+    q: {
+      type: "messenger",
+      page_id: pageId,
+      status: "active"
+    },
+    limit: 1
+  });
+
+  let channel = channels[0];
+
+  if (!channel) {
+    const fallbackChannels = await listEntity("Channel", {
+      q: { type: "messenger", status: "active" },
+      limit: 1
+    });
+    channel = fallbackChannels[0];
+  }
+
+  if (!channel) {
+    throw new Error(
+      `No active Messenger channel found for page_id ${pageId}. ` +
+      `Create a Channel record in Base44 with page_id="${pageId}", type="messenger", status="active".`
+    );
+  }
+
+  const [client, bot, knowledgeItems] = await Promise.all([
+    listEntity("Client", { q: { id: channel.client_id }, limit: 1 }),
+    listEntity("Bot", { q: { id: channel.bot_id, active: true }, limit: 1 }),
+    listEntity("KnowledgeItem", {
+      q: { client_id: channel.client_id, active: true },
+      limit: 20,
+      sortBy: "-updated_date"
+    })
+  ]);
+
+  if (!bot[0]) {
+    throw new Error(`No active bot found for channel ${channel.id}`);
+  }
+
+  return {
+    channel,
+    client: client[0] || null,
+    bot: bot[0],
+    knowledgeItems
+  };
+}
+
+export async function findOrCreateConversation({ channel, message, channelType }) {
   const existing = await listEntity("Conversation", {
     q: {
       channel_id: channel.id,
@@ -76,13 +125,16 @@ export async function findOrCreateConversation({ channel, message }) {
     });
   }
 
+  const type = channelType || channel.type || "whatsapp";
+  const customerName = message.customerName || (type === "messenger" ? "Cliente Messenger" : "Cliente WhatsApp");
+
   return createEntity("Conversation", {
     client_id: channel.client_id,
     channel_id: channel.id,
     external_user_id: message.from,
-    customer_name: message.customerName || "Cliente WhatsApp",
-    customer_phone: message.from,
-    channel_type: "whatsapp",
+    customer_name: customerName,
+    customer_phone: type === "whatsapp" ? message.from : "",
+    channel_type: type,
     status: "bot_active",
     last_message_at: now,
     last_message_preview: trimPreview(message.text),

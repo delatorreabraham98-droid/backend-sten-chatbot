@@ -3,6 +3,7 @@ import express from "express";
 import { config, getMissingRequiredEnv } from "./config.js";
 import { adminRouter } from "./routes/admin.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
+import { messengerRouter } from "./routes/messenger.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.get("/health", (_req, res) => {
 
 app.use(adminRouter);
 app.use(whatsappRouter);
+app.use(messengerRouter);
 
 app.use((err, _req, res, _next) => {
   console.error("Unhandled request error", err);

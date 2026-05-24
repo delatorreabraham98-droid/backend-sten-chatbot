@@ -39,3 +39,31 @@ export async function sendWhatsAppTextMessage({ to, body }) {
 
   return payload;
 }
+
+export async function sendMessengerTextMessage({ recipientId, body }) {
+  if (!config.messenger.pageAccessToken) {
+    throw new Error("Missing Messenger Page Access Token");
+  }
+
+  const response = await fetch(
+    `https://graph.facebook.com/${graphApiVersion}/me/messages?access_token=${config.messenger.pageAccessToken}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        recipient: { id: recipientId },
+        message: { text: body }
+      })
+    }
+  );
+
+  const payload = await response.json().catch(() => ({}));
+
+  if (!response.ok) {
+    const detail = payload?.error?.message || "Meta rejected the message";
+    console.error("Messenger API error", { message: detail, full: payload });
+    throw new Error(detail);
+  }
+
+  return payload;
+}

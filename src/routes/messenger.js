@@ -5,41 +5,41 @@ import {
   createConversationMessage,
   createLeadIfCommercialIntent,
   findOrCreateConversation,
-  getRuntimeContextForWhatsApp
+  getRuntimeContextForMessenger
 } from "../services/base44DataStore.js";
-import { sendWhatsAppTextMessage } from "../services/metaWhatsApp.js";
-import { extractWhatsAppMessages } from "../services/whatsappWebhookParser.js";
+import { sendMessengerTextMessage } from "../services/metaWhatsApp.js";
+import { extractMessengerMessages } from "../services/messengerWebhookParser.js";
 
-export const whatsappRouter = express.Router();
+export const messengerRouter = express.Router();
 
-whatsappRouter.get("/webhook/whatsapp", (req, res) => {
+messengerRouter.get("/webhook/messenger", (req, res) => {
   const mode = req.query["hub.mode"];
   const token = req.query["hub.verify_token"];
   const challenge = req.query["hub.challenge"];
 
-  if (mode === "subscribe" && token === config.meta.verifyToken) {
+  if (mode === "subscribe" && token === config.messenger.verifyToken) {
     return res.status(200).send(challenge);
   }
 
   return res.sendStatus(403);
 });
 
-whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
+messengerRouter.post("/webhook/messenger", async (req, res) => {
   res.sendStatus(200);
 
-  const inboundMessages = extractWhatsAppMessages(req.body);
+  const inboundMessages = extractMessengerMessages(req.body);
   if (inboundMessages.length === 0) return;
 
   for (const message of inboundMessages) {
     try {
-      const runtimeContext = await getRuntimeContextForWhatsApp({
-        phoneNumberId: message.phoneNumberId
+      const runtimeContext = await getRuntimeContextForMessenger({
+        pageId: message.pageId
       });
 
       const conversation = await findOrCreateConversation({
         channel: runtimeContext.channel,
         message,
-        channelType: "whatsapp"
+        channelType: "messenger"
       });
 
       await createConversationMessage({
@@ -57,8 +57,8 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         customerMessage: message.text
       });
 
-      const metaResponse = await sendWhatsAppTextMessage({
-        to: message.from,
+      const metaResponse = await sendMessengerTextMessage({
+        recipientId: message.from,
         body: reply
       });
 
@@ -78,13 +78,12 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         reply
       });
 
-      console.log("WhatsApp message processed", {
+      console.log("Messenger message processed", {
         messageId: message.messageId,
-        from: message.from,
-        phoneNumberId: message.phoneNumberId
+        from: message.from
       });
     } catch (error) {
-      console.error("Failed to process WhatsApp message", {
+      console.error("Failed to process Messenger message", {
         messageId: message.messageId,
         error: error.message
       });

@@ -12,6 +12,10 @@ export const config = {
     phoneNumberId: process.env.META_PHONE_NUMBER_ID || "",
     whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || ""
   },
+  messenger: {
+    verifyToken: process.env.MESSENGER_VERIFY_TOKEN || "",
+    pageAccessToken: process.env.MESSENGER_PAGE_ACCESS_TOKEN || ""
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
     model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
@@ -34,6 +38,7 @@ export function getMissingRequiredEnv() {
     META_VERIFY_TOKEN: config.meta.verifyToken,
     META_ACCESS_TOKEN: config.meta.accessToken,
     META_PHONE_NUMBER_ID: config.meta.phoneNumberId,
+    MESSENGER_PAGE_ACCESS_TOKEN: config.messenger.pageAccessToken,
     OPENAI_API_KEY: config.openai.apiKey,
     BASE44_APP_ID: config.base44.appId,
     BASE44_API_KEY: config.base44.apiKey
