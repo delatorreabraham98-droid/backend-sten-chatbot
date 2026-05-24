@@ -131,8 +131,7 @@ export async function createLeadIfCommercialIntent({ conversation, channel, mess
   const existing = await listEntity("Lead", {
     q: {
       client_id: channel.client_id,
-      conversation_id: conversation.id,
-      status: "new"
+      conversation_id: conversation.id
     },
     limit: 1
   });
@@ -150,14 +149,64 @@ export async function createLeadIfCommercialIntent({ conversation, channel, mess
   });
 }
 
-function hasCommercialIntent(text) {
-  const normalized = text.toLowerCase();
+function hasCommercialIntent(text = "") {
+
+  const normalized = text
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "");
+
   const keywords = [
-    "precio", "cuanto", "cuanto cuesta", "cotizacion", "cotizar",
-    "comprar", "instalacion", "instalar", "mayoreo", "disponible",
-    "tienes", "ocupo", "necesito"
+
+    "precio",
+    "cuanto",
+    "cuánto",
+    "cuanto cuesta",
+    "cotizacion",
+    "cotización",
+    "comprar",
+    "instalacion",
+    "instalación",
+    "instalar",
+    "mayoreo",
+    "disponible",
+    "tienes",
+    "ocupo",
+    "necesito",
+
+    "premium",
+    "las buenas",
+    "las premium",
+    "2 caras",
+    "4 caras",
+    "dos caras",
+    "cuatro caras",
+    "baratas",
+    "economicas",
+    "económicas",
+    "quiero calidad",
+    "quiero algo bueno",
+    "recomendadas",
+    "las chidas",
+    "las mejores",
+    "csp",
+    "cob",
+
+    "me interesa",
+    "donde",
+    "dónde",
+    "voy",
+    "ok",
+    "sale",
+    "va",
+    "quiero",
+    "mandame",
+    "mándame"
   ];
-  return keywords.some((keyword) => normalized.includes(keyword));
+
+  return keywords.some(keyword =>
+    normalized.includes(keyword)
+  );
 }
 
 function extractProductInterest(text) {
