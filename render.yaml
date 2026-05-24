@@ -26,7 +26,7 @@ services:
       - key: BASE44_API_BASE_URL
         value: https://sten-bot-flow.base44.app/api
       - key: BASE44_APP_ID
-        value: 6a0b8ecaa62d1dda9f17f8ae
+        sync: false
       - key: BASE44_API_KEY
         sync: false
       - key: BASE44_MESSAGE_HAS_CLIENT_ID

@@ -42,17 +42,17 @@ Health Check Path: /health
 Agregar:
 
 ```text
-META_VERIFY_TOKEN=sten_meta_verify_2026_latorre
-META_ACCESS_TOKEN=nuevo_token_de_meta
-META_PHONE_NUMBER_ID=1164009210125614
-WHATSAPP_BUSINESS_ACCOUNT_ID=960695886752699
-OPENAI_API_KEY=key_de_openai
+META_VERIFY_TOKEN=your_verify_token
+META_ACCESS_TOKEN=your_meta_access_token
+META_PHONE_NUMBER_ID=replace_with_your_phone_number_id
+WHATSAPP_BUSINESS_ACCOUNT_ID=replace_with_your_waba_id
+OPENAI_API_KEY=your_openai_api_key
 OPENAI_MODEL=gpt-4.1-mini
-BASE44_API_BASE_URL=https://sten-bot-flow.base44.app/api
-BASE44_APP_ID=6a0b8ecaa62d1dda9f17f8ae
-BASE44_API_KEY=nueva_key_de_base44
+BASE44_API_BASE_URL=https://your-base44-app.base44.app/api
+BASE44_APP_ID=replace_with_your_base44_app_id
+BASE44_API_KEY=your_base44_api_key
 BASE44_MESSAGE_HAS_CLIENT_ID=false
-BOT_BUSINESS_NAME=La Torre LED Shop
+BOT_BUSINESS_NAME=your_business_name
 BOT_TIMEZONE=America/Tijuana
 ```
 
@@ -71,7 +71,7 @@ URL de devolucion de llamada:
 https://TU-SERVICIO.onrender.com/webhook/whatsapp
 
 Token de verificacion:
-sten_meta_verify_2026_latorre
+your_verify_token
 ```
 
 Despues presionar:
