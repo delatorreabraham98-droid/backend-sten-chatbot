@@ -141,8 +141,24 @@ export async function transcribeAudio(audioData, mimeType) {
   throw new Error("No transcription service configured. Set GROQ_API_KEY or OPENAI_API_KEY");
 }
 
-function splitTextForGoogleTTS(text, maxLen = 200) {
-  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+const EMOJI_REGEX = /[\p{Emoji_Presentation}\p{Emoji}\u200d\u200b\ufe0f\u23cf\u231a\u23f0-\u23fa\u2600-\u27bf]+/gu;
+
+function stripEmojis(text) {
+  return text.replace(EMOJI_REGEX, '').replace(/\s+/g, ' ').trim();
+}
+
+function shortenForAudio(text) {
+  return text
+    .replace(/\n{2,}/g, '. ')
+    .replace(/\n/g, '. ')
+    .replace(/\b(?:✅|❌|🔹|🔸|👉|💡|🚗|🛒|😊|👌|🔥)\s*/g, '')
+    .replace(/\s{2,}/g, ' ')
+    .trim();
+}
+
+function splitTextForTTS(text, maxLen = 200) {
+  const cleaned = shortenForAudio(stripEmojis(text));
+  const sentences = cleaned.match(/[^.!?\n]+[.!?\n]*/g) || [cleaned];
   const chunks = [];
   let current = "";
 
@@ -156,37 +172,73 @@ function splitTextForGoogleTTS(text, maxLen = 200) {
   }
   if (current.trim()) chunks.push(current.trim());
 
-  if (chunks.length === 0) chunks.push(text.slice(0, maxLen));
+  if (chunks.length === 0) chunks.push(cleaned.slice(0, maxLen));
   return chunks;
 }
 
 export async function textToSpeech(text) {
-  const lang = "es";
-  const chunks = splitTextForGoogleTTS(text);
+  // Try Edge TTS voices via StreamElements free API (es-MX-JorgeNeural = voz grave masculina)
+  const edgeVoices = [
+    { voice: 'es-MX-JorgeNeural', lang: 'es-MX' },
+    { voice: 'es-ES-AlvaroNeural', lang: 'es-ES' }
+  ];
 
-  const audioParts = [];
-  for (const chunk of chunks) {
-    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(chunk)}`;
-    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
+  const cleaned = shortenForAudio(stripEmojis(text));
+  if (!cleaned) throw new Error("Text empty after cleaning");
 
-    if (!res.ok) {
-      const err = await res.text().catch(() => "unknown");
-      throw new Error(`Google TTS failed: ${err}`);
+  const chunks = splitTextForTTS(cleaned);
+
+  // Try Edge TTS via StreamElements API (free, no key required)
+  for (const { voice, lang } of edgeVoices) {
+    try {
+      const audioParts = [];
+      for (const chunk of chunks) {
+        const url = `https://api.streamelements.com/kappa/v2/speech?voice=${voice}&text=${encodeURIComponent(chunk)}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) throw new Error(`Edge TTS ${voice} failed (${res.status})`);
+        const buffer = await res.arrayBuffer();
+        audioParts.push(new Uint8Array(buffer));
+      }
+      const totalLen = audioParts.reduce((sum, p) => sum + p.length, 0);
+      const combined = new Uint8Array(totalLen);
+      let offset = 0;
+      for (const part of audioParts) {
+        combined.set(part, offset);
+        offset += part.length;
+      }
+      console.log(`TTS done with Edge voice: ${voice}`);
+      return combined;
+    } catch (err) {
+      console.warn(`Edge TTS ${voice} failed, trying next voice`, err.message);
     }
-
-    const buffer = await res.arrayBuffer();
-    audioParts.push(new Uint8Array(buffer));
   }
 
-  // Combine all MP3 chunks
-  const totalLen = audioParts.reduce((sum, p) => sum + p.length, 0);
-  const combined = new Uint8Array(totalLen);
-  let offset = 0;
-  for (const part of audioParts) {
-    combined.set(part, offset);
-    offset += part.length;
+  // Fallback: Google TTS con es-MX
+  const googleLocales = ['es-MX', 'es-ES', 'es'];
+  for (const lang of googleLocales) {
+    try {
+      const audioParts = [];
+      for (const chunk of chunks) {
+        const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(chunk)}`;
+        const res = await fetch(url, { signal: AbortSignal.timeout(10_000) });
+        if (!res.ok) throw new Error(`Google TTS ${lang} failed (${res.status})`);
+        const buffer = await res.arrayBuffer();
+        audioParts.push(new Uint8Array(buffer));
+      }
+      const totalLen = audioParts.reduce((sum, p) => sum + p.length, 0);
+      const combined = new Uint8Array(totalLen);
+      let offset = 0;
+      for (const part of audioParts) {
+        combined.set(part, offset);
+        offset += part.length;
+      }
+      return combined;
+    } catch (err) {
+      console.warn(`Google TTS ${lang} failed, trying next`, err.message);
+    }
   }
-  return combined;
+
+  throw new Error("All TTS services failed");
 }
 
 export async function uploadMediaToMeta(audioData, mimeType = "audio/mpeg") {
