@@ -1,5 +1,4 @@
 import express from "express";
-import { config } from "../config.js";
 import { generateBotReply } from "../services/aiResponder.js";
 import {
   createConversationMessage,
@@ -88,10 +87,11 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         customerMessage: messageText
       });
 
-      // Send response — audio if configured, otherwise text
+      // Respond with audio if incoming was audio, otherwise text
+      const respondWithAudio = message.messageType === "audio";
       let responsePayload;
 
-      if (config.respondWithAudio) {
+      if (respondWithAudio) {
         try {
           const audioData = await textToSpeech(reply);
           const mediaId = await uploadMediaToMeta(audioData);
@@ -110,7 +110,7 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         direction: "outbound",
         senderType: "bot",
         messageText: reply,
-        messageType: config.respondWithAudio ? "audio" : "text",
+        messageType: respondWithAudio ? "audio" : "text",
         rawPayload: responsePayload
       });
 
@@ -126,7 +126,7 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         from: message.from,
         phoneNumberId: message.phoneNumberId,
         messageType: message.messageType,
-        respondedWithAudio: config.respondWithAudio
+        respondedWithAudio: respondWithAudio
       });
     } catch (error) {
       console.error("Failed to process WhatsApp message", {
