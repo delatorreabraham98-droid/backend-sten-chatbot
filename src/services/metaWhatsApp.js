@@ -95,63 +95,106 @@ export async function downloadMediaFromMeta(mediaId) {
 }
 
 export async function transcribeAudio(audioData, mimeType) {
-  if (!config.openai.apiKey) throw new Error("Missing OpenAI API key");
+  // Try Groq (free) first, fallback to OpenAI
+  if (config.groq.apiKey) {
+    const ext = mimeType?.includes("mp4") ? "m4a" : "ogg";
+    const blob = new Blob([audioData], { type: mimeType || "audio/ogg" });
+    const form = new FormData();
+    form.append("file", blob, `audio.${ext}`);
+    form.append("model", "whisper-large-v3");
+    form.append("response_format", "text");
 
-  const ext = mimeType?.includes("mp4") ? "m4a" : "ogg";
-  const blob = new Blob([audioData], { type: mimeType || "audio/ogg" });
-  const form = new FormData();
-  form.append("file", blob, `audio.${ext}`);
-  form.append("model", "whisper-1");
-  form.append("response_format", "text");
+    const res = await fetch("https://api.groq.com/openai/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.groq.apiKey}` },
+      body: form,
+      signal: AbortSignal.timeout(30_000)
+    });
 
-  const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
-    method: "POST",
-    headers: { Authorization: `Bearer ${config.openai.apiKey}` },
-    body: form,
-    signal: AbortSignal.timeout(30_000)
-  });
-
-  if (!res.ok) {
-    const err = await res.text().catch(() => "unknown");
-    throw new Error(`Whisper transcription failed: ${err}`);
+    if (res.ok) return (await res.text()).trim();
+    console.warn("Groq Whisper failed, falling back to OpenAI", await res.text().catch(() => ""));
   }
 
-  return (await res.text()).trim();
+  if (config.openai.apiKey) {
+    const ext = mimeType?.includes("mp4") ? "m4a" : "ogg";
+    const blob = new Blob([audioData], { type: mimeType || "audio/ogg" });
+    const form = new FormData();
+    form.append("file", blob, `audio.${ext}`);
+    form.append("model", "whisper-1");
+    form.append("response_format", "text");
+
+    const res = await fetch("https://api.openai.com/v1/audio/transcriptions", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${config.openai.apiKey}` },
+      body: form,
+      signal: AbortSignal.timeout(30_000)
+    });
+
+    if (!res.ok) {
+      const err = await res.text().catch(() => "unknown");
+      throw new Error(`Whisper transcription failed: ${err}`);
+    }
+
+    return (await res.text()).trim();
+  }
+
+  throw new Error("No transcription service configured. Set GROQ_API_KEY or OPENAI_API_KEY");
+}
+
+function splitTextForGoogleTTS(text, maxLen = 200) {
+  const sentences = text.match(/[^.!?\n]+[.!?\n]*/g) || [text];
+  const chunks = [];
+  let current = "";
+
+  for (const sentence of sentences) {
+    if ((current + sentence).length > maxLen && current.length > 0) {
+      chunks.push(current.trim());
+      current = sentence;
+    } else {
+      current += sentence;
+    }
+  }
+  if (current.trim()) chunks.push(current.trim());
+
+  if (chunks.length === 0) chunks.push(text.slice(0, maxLen));
+  return chunks;
 }
 
 export async function textToSpeech(text) {
-  if (!config.openai.apiKey) throw new Error("Missing OpenAI API key");
+  const lang = "es";
+  const chunks = splitTextForGoogleTTS(text);
 
-  const res = await fetch("https://api.openai.com/v1/audio/speech", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${config.openai.apiKey}`,
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      model: "tts-1",
-      voice: "alloy",
-      input: text,
-      response_format: "opus"
-    }),
-    signal: AbortSignal.timeout(30_000)
-  });
+  const audioParts = [];
+  for (const chunk of chunks) {
+    const url = `https://translate.google.com/translate_tts?ie=UTF-8&client=tw-ob&tl=${lang}&q=${encodeURIComponent(chunk)}`;
+    const res = await fetch(url, { signal: AbortSignal.timeout(15_000) });
 
-  if (!res.ok) {
-    const err = await res.text().catch(() => "unknown");
-    throw new Error(`TTS failed: ${err}`);
+    if (!res.ok) {
+      const err = await res.text().catch(() => "unknown");
+      throw new Error(`Google TTS failed: ${err}`);
+    }
+
+    const buffer = await res.arrayBuffer();
+    audioParts.push(new Uint8Array(buffer));
   }
 
-  const buffer = await res.arrayBuffer();
-  return new Uint8Array(buffer);
+  // Combine all MP3 chunks
+  const totalLen = audioParts.reduce((sum, p) => sum + p.length, 0);
+  const combined = new Uint8Array(totalLen);
+  let offset = 0;
+  for (const part of audioParts) {
+    combined.set(part, offset);
+    offset += part.length;
+  }
+  return combined;
 }
 
-export async function uploadMediaToMeta(audioData, mimeType = "audio/ogg") {
+export async function uploadMediaToMeta(audioData, mimeType = "audio/mpeg") {
   if (!config.meta.accessToken || !config.meta.phoneNumberId) {
     throw new Error("Missing Meta WhatsApp configuration");
   }
 
-  const ext = mimeType.includes("mp4") ? "m4a" : "ogg";
+  const ext = mimeType.includes("mp4") ? "m4a" : mimeType.includes("mpeg") ? "mp3" : "ogg";
   const blob = new Blob([audioData], { type: mimeType });
   const form = new FormData();
   form.append("messaging_product", "whatsapp");

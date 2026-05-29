@@ -16,6 +16,9 @@ export const config = {
     verifyToken: process.env.MESSENGER_VERIFY_TOKEN || "",
     pageAccessToken: process.env.MESSENGER_PAGE_ACCESS_TOKEN || ""
   },
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || ""
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
     model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
