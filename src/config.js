@@ -30,7 +30,8 @@ export const config = {
     businessName: process.env.BOT_BUSINESS_NAME || "La Torre LED Shop",
     timezone: process.env.BOT_TIMEZONE || "America/Tijuana"
   },
-  adminWhatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || ""
+  adminWhatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || "",
+  respondWithAudio: process.env.RESPOND_WITH_AUDIO === "true"
 };
 
 export function getMissingRequiredEnv() {

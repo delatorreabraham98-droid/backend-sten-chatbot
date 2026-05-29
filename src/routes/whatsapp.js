@@ -7,7 +7,14 @@ import {
   findOrCreateConversation,
   getRuntimeContextForWhatsApp
 } from "../services/base44DataStore.js";
-import { sendWhatsAppTextMessage } from "../services/metaWhatsApp.js";
+import {
+  sendWhatsAppTextMessage,
+  sendWhatsAppAudioMessage,
+  downloadMediaFromMeta,
+  transcribeAudio,
+  textToSpeech,
+  uploadMediaToMeta
+} from "../services/metaWhatsApp.js";
 import { extractWhatsAppMessages } from "../services/whatsappWebhookParser.js";
 
 export const whatsappRouter = express.Router();
@@ -24,6 +31,19 @@ whatsappRouter.get("/webhook/whatsapp", (req, res) => {
   return res.sendStatus(403);
 });
 
+async function processAudioMessage(message) {
+  console.log("Processing audio message", { messageId: message.messageId, from: message.from });
+
+  const { data: audioData, mimeType } = await downloadMediaFromMeta(message.mediaId);
+
+  const transcribedText = await transcribeAudio(audioData, mimeType);
+  if (!transcribedText) throw new Error("Transcription returned empty text");
+
+  console.log("Audio transcribed", { messageId: message.messageId, text: transcribedText.slice(0, 100) });
+
+  return { transcribedText };
+}
+
 whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
   res.sendStatus(200);
 
@@ -36,6 +56,16 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         phoneNumberId: message.phoneNumberId
       });
 
+      // For audio messages, transcribe first
+      let messageText = message.text;
+      let messageType = message.messageType || "text";
+
+      if (message.messageType === "audio") {
+        const { transcribedText } = await processAudioMessage(message);
+        messageText = transcribedText;
+        message.text = transcribedText;
+      }
+
       const conversation = await findOrCreateConversation({
         channel: runtimeContext.channel,
         message,
@@ -47,20 +77,32 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         channel: runtimeContext.channel,
         direction: "inbound",
         senderType: "customer",
-        messageText: message.text,
+        messageText,
+        messageType,
         rawPayload: message.raw
       });
 
       const reply = await generateBotReply({
         customerPhone: message.from,
         customerName: message.customerName,
-        customerMessage: message.text
+        customerMessage: messageText
       });
 
-      const metaResponse = await sendWhatsAppTextMessage({
-        to: message.from,
-        body: reply
-      });
+      // Send response — audio if configured, otherwise text
+      let responsePayload;
+
+      if (config.respondWithAudio) {
+        try {
+          const audioData = await textToSpeech(reply);
+          const mediaId = await uploadMediaToMeta(audioData);
+          responsePayload = await sendWhatsAppAudioMessage({ to: message.from, mediaId });
+        } catch (audioErr) {
+          console.error("TTS/audio send failed, falling back to text", audioErr.message);
+          responsePayload = await sendWhatsAppTextMessage({ to: message.from, body: reply });
+        }
+      } else {
+        responsePayload = await sendWhatsAppTextMessage({ to: message.from, body: reply });
+      }
 
       await createConversationMessage({
         conversation,
@@ -68,7 +110,8 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
         direction: "outbound",
         senderType: "bot",
         messageText: reply,
-        rawPayload: metaResponse
+        messageType: config.respondWithAudio ? "audio" : "text",
+        rawPayload: responsePayload
       });
 
       await createLeadIfCommercialIntent({
@@ -81,7 +124,9 @@ whatsappRouter.post("/webhook/whatsapp", async (req, res) => {
       console.log("WhatsApp message processed", {
         messageId: message.messageId,
         from: message.from,
-        phoneNumberId: message.phoneNumberId
+        phoneNumberId: message.phoneNumberId,
+        messageType: message.messageType,
+        respondedWithAudio: config.respondWithAudio
       });
     } catch (error) {
       console.error("Failed to process WhatsApp message", {

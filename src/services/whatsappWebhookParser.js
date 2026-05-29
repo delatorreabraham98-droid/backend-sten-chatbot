@@ -14,17 +14,32 @@ export function extractWhatsAppMessages(payload) {
       );
 
       for (const message of value.messages || []) {
-        if (message.type !== "text") continue;
-
-        messages.push({
-          from: message.from,
-          messageId: message.id,
-          text: message.text?.body || "",
-          timestamp: message.timestamp,
-          customerName: contactsByWaId.get(message.from) || "",
-          phoneNumberId: value.metadata?.phone_number_id || "",
-          raw: message
-        });
+        if (message.type === "text") {
+          messages.push({
+            from: message.from,
+            messageId: message.id,
+            text: message.text?.body || "",
+            timestamp: message.timestamp,
+            customerName: contactsByWaId.get(message.from) || "",
+            phoneNumberId: value.metadata?.phone_number_id || "",
+            messageType: "text",
+            raw: message
+          });
+        } else if (message.type === "audio") {
+          const audio = message.audio || {};
+          messages.push({
+            from: message.from,
+            messageId: message.id,
+            text: "",
+            timestamp: message.timestamp,
+            customerName: contactsByWaId.get(message.from) || "",
+            phoneNumberId: value.metadata?.phone_number_id || "",
+            messageType: "audio",
+            mediaId: audio.id || audio.media_id || null,
+            mimeType: audio.mime_type || "audio/ogg",
+            raw: message
+          });
+        }
       }
     }
   }
