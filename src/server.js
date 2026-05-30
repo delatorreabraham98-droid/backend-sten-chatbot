@@ -4,6 +4,7 @@ import { config, getMissingRequiredEnv } from "./config.js";
 import { adminRouter } from "./routes/admin.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
 import { messengerRouter } from "./routes/messenger.js";
+import { generateBotReply } from "./services/aiResponder.js";
 
 const app = express();
 
@@ -29,6 +30,23 @@ app.get("/health", (_req, res) => {
 app.use(adminRouter);
 app.use(whatsappRouter);
 app.use(messengerRouter);
+
+app.post("/test/chat", async (req, res) => {
+  const { message, phone, name } = req.body || {};
+  if (!message) {
+    return res.status(400).json({ error: "message is required" });
+  }
+  try {
+    const reply = await generateBotReply({
+      customerPhone: phone || "5216866500526",
+      customerName: name || "Test User",
+      customerMessage: message
+    });
+    res.json({ reply });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
 
 app.use((err, _req, res, _next) => {
   console.error("Unhandled request error", err);
