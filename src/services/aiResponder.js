@@ -495,7 +495,7 @@ function fallbackReply(memory) {
   if (memory.vehicle) {
     return "Seguimos con su " + memory.vehicle + ". Las opciones son COB 2 Caras $250, COB 4 Caras $350, CSP Premium $500. Cual le interesa?";
   }
-  return getGreeting() + ". Cual es el ano y modelo de su vehiculo?";
+  return getGreeting() + ". Cual es el año y modelo de su vehículo?";
 }
 
 /* ──────────────────────────────────────────────
@@ -517,22 +517,47 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
     return bypassReply;
   }
 
-  // 2. GPT + tools
-  if (!config.openai.apiKey) {
-    return fallbackReply(memory);
+  // 2. GPT + tools (skip if no API key)
+  let reply = null;
+  if (config.openai.apiKey) {
+    const history = await getConversationHistory(customerPhone, 10);
+    const systemPrompt = buildSystemPrompt({ history, memory, customerName });
+    const handlers = createToolHandlers(customerPhone);
+
+    reply = await callGPTWithTools(
+      [{ role: "system", content: systemPrompt }, { role: "user", content: message }],
+      handlers
+    );
   }
 
-  const history = await getConversationHistory(customerPhone, 10);
-  const systemPrompt = buildSystemPrompt({ history, memory, customerName });
-  const handlers = createToolHandlers(customerPhone);
-
-  let reply = await callGPTWithTools(
-    [{ role: "system", content: systemPrompt }, { role: "user", content: message }],
-    handlers
-  );
-
-  // 3. Fallback if GPT failed
+  // 3. Fallback — detect vehicle & reply without GPT
   if (!reply) {
+    if (!memory.vehicle) {
+      const vehicle = detectVehicleInfo(message);
+      if (vehicle) {
+        memory.vehicle = vehicle.model;
+        memory.vehicle_year = vehicle.year;
+        memory.bulb_low = vehicle.lowBeam;
+        memory.bulb_high = vehicle.highBeam;
+        memory.bulb_type = vehicle.type;
+        memory.conversation_stage = "vehicle_identified";
+        await saveCustomerMemory(customerPhone, memory);
+      } else {
+        const year = (message.match(/\b(19|20)\d{2}\b/) || [])[0] || null;
+        if (year) {
+          const webResult = await webVehicleLookup({ message, year });
+          if (webResult) {
+            memory.vehicle = webResult.model;
+            memory.vehicle_year = webResult.year;
+            memory.bulb_low = webResult.lowBeam;
+            memory.bulb_high = webResult.highBeam;
+            memory.bulb_type = webResult.type;
+            memory.conversation_stage = "vehicle_identified";
+            await saveCustomerMemory(customerPhone, memory);
+          }
+        }
+      }
+    }
     reply = fallbackReply(memory);
   }
 
