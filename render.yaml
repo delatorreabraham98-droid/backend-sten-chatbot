@@ -21,8 +21,10 @@ services:
         sync: false
       - key: OPENAI_API_KEY
         sync: false
+      - key: OPENAI_BASE_URL
+        value: https://api.groq.com/openai/v1
       - key: OPENAI_MODEL
-        value: gpt-4.1-mini
+        value: llama-3.3-70b-versatile
       - key: BASE44_API_BASE_URL
         value: https://sten-bot-flow.base44.app/api
       - key: BASE44_APP_ID
