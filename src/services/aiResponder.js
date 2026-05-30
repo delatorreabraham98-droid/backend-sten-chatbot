@@ -14,6 +14,7 @@ import {
 } from "./webVehicleLookup.js";
 
 import {
+  detectProductIntent,
   buildProductReply,
   buildObjectionReply
 } from "./intentEngine.js";
@@ -530,7 +531,7 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
     );
   }
 
-  // 3. Fallback — detect vehicle & reply without GPT
+  // 3. Fallback — detect vehicle & product without GPT
   if (!reply) {
     if (!memory.vehicle) {
       const vehicle = detectVehicleInfo(message);
@@ -558,7 +559,21 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
         }
       }
     }
-    reply = fallbackReply(memory);
+
+    if (memory.vehicle && !memory.selected_product) {
+      const intent = detectProductIntent(message);
+      if (intent) {
+        memory.selected_product = intent.product;
+        memory.conversation_stage = "product_selected";
+        memory.lead_score = (memory.lead_score || 0) + 25;
+        await saveCustomerMemory(customerPhone, memory);
+        reply = buildProductReply(intent, { lowBeam: memory.bulb_low, highBeam: memory.bulb_high });
+      }
+    }
+
+    if (!reply) {
+      reply = fallbackReply(memory);
+    }
   }
 
   // 4. Save conversation history
