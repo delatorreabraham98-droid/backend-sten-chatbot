@@ -31,7 +31,7 @@ app.use(adminRouter);
 app.use(whatsappRouter);
 app.use(messengerRouter);
 
-app.post("/test/chat", async (req, res) => {
+app.post("/test/chat", async (req, res, next) => {
   const { message, phone, name } = req.body || {};
   if (!message) {
     return res.status(400).json({ error: "message is required" });
@@ -44,7 +44,7 @@ app.post("/test/chat", async (req, res) => {
     });
     res.json({ reply });
   } catch (err) {
-    res.status(500).json({ error: err.message });
+    next(err);
   }
 });
 
