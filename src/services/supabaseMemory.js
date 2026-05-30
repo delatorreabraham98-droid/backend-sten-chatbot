@@ -3,6 +3,8 @@ import { createClient } from "@supabase/supabase-js";
 const SUPABASE_URL = process.env.SUPABASE_URL;
 const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
+const localCache = new Map();
+
 function getClient() {
   if (!SUPABASE_URL || !SUPABASE_KEY) return null;
   return createClient(SUPABASE_URL, SUPABASE_KEY);
@@ -12,7 +14,7 @@ const supabase = getClient();
 
 export async function getCustomerMemory(phone) {
 
-  if (!supabase) return null;
+  if (!supabase) return localCache.get(phone) || null;
 
   const { data, error } = await supabase
     .from("customer_memory")
@@ -29,7 +31,10 @@ export async function getCustomerMemory(phone) {
 
 export async function saveCustomerMemory(phone, memory) {
 
-  if (!supabase) return;
+  if (!supabase) {
+    localCache.set(phone, { ...memory, phone });
+    return;
+  }
 
   const { id: _id, created_at: _ca, updated_at: _ua, ...cleanMemory } = memory;
 
