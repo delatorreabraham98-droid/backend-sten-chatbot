@@ -1,10 +1,11 @@
 import { createClient } from "@supabase/supabase-js";
 
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 function getClient() {
-  const url = process.env.SUPABASE_URL;
-  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
-  if (!url || !key) return null;
-  return createClient(url, key);
+  if (!SUPABASE_URL || !SUPABASE_KEY) return null;
+  return createClient(SUPABASE_URL, SUPABASE_KEY);
 }
 
 const supabase = getClient();
@@ -74,4 +75,34 @@ export async function increaseLeadScore(phone, amount = 10) {
     ...memory,
     lead_score: (memory.lead_score || 0) + amount
   });
+}
+
+export async function getConversationHistory(phone, limit = 10) {
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("conversation_messages")
+    .select("role, message, created_at")
+    .eq("phone", phone)
+    .order("created_at", { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error("getConversationHistory error:", error.message);
+    return [];
+  }
+
+  return (data || []).reverse();
+}
+
+export async function saveConversationMessages(messages) {
+  if (!supabase || !messages || messages.length === 0) return;
+
+  const { error } = await supabase
+    .from("conversation_messages")
+    .insert(messages);
+
+  if (error) {
+    console.error("saveConversationMessages error:", error.message);
+  }
 }
