@@ -31,12 +31,12 @@ app.use(adminRouter);
 app.use(whatsappRouter);
 app.use(messengerRouter);
 
-app.post("/test/chat", async (req, res, next) => {
-  const { message, phone, name } = req.body || {};
-  if (!message) {
-    return res.status(400).json({ error: "message is required" });
-  }
+app.post("/test/chat", async (req, res) => {
   try {
+    const { message, phone, name } = req.body || {};
+    if (!message) {
+      return res.status(400).json({ error: "message is required" });
+    }
     const reply = await generateBotReply({
       customerPhone: phone || "5216866500526",
       customerName: name || "Test User",
@@ -44,7 +44,8 @@ app.post("/test/chat", async (req, res, next) => {
     });
     res.json({ reply });
   } catch (err) {
-    next(err);
+    console.error("/test/chat error:", err?.message || err);
+    res.status(500).json({ error: err?.message || "unknown" });
   }
 });
 
