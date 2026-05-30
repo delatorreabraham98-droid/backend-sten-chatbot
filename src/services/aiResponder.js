@@ -330,7 +330,7 @@ async function callGPTWithTools(messages, handlers, maxCalls = 3) {
 
     if (!msg.tool_calls || msg.tool_calls.length === 0) {
       const content = msg.content || "";
-      await handlers.flushMemory();
+      if (typeof handlers?.flushMemory === "function") await handlers.flushMemory();
       return content;
     }
 
@@ -352,7 +352,7 @@ async function callGPTWithTools(messages, handlers, maxCalls = 3) {
     callCount++;
   }
 
-  await handlers.flushMemory();
+  if (typeof handlers?.flushMemory === "function") await handlers.flushMemory();
   const last = msgs[msgs.length - 1];
   return last.content || null;
 }
