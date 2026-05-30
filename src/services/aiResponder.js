@@ -295,7 +295,7 @@ async function callGPTWithTools(messages, handlers, maxCalls = 3) {
   let callCount = 0;
 
   while (callCount < maxCalls) {
-    const response = await fetch("https://api.openai.com/v1/chat/completions", {
+    const response = await fetch(config.openai.baseUrl + "/chat/completions", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
