@@ -26,6 +26,10 @@ import {
 
 import { sendWhatsAppTextMessage } from "./metaWhatsApp.js";
 import { config } from "../config.js";
+import {
+  crearClienteEnTienda,
+  crearCotizacionEnTienda
+} from "./ledStoreApi.js";
 
 function getGreeting() {
   const hour = new Date().getHours();
@@ -514,6 +518,23 @@ Perfecto 👌
     const productName = productNames[memory.selected_product] || memory.selected_product || "N/A";
     const productPrice = productPrices[memory.selected_product] || "";
 
+    crearClienteEnTienda({
+      nombre: customerName || memory.customer_name || "Cliente WhatsApp",
+      telefono: customerPhone,
+      vehiculo: memory.vehicle || ""
+    }).catch((err) => {
+      console.error("Failed to sync client to LED store:", err.message);
+    });
+
+    crearCotizacionEnTienda({
+      nombre: customerName || memory.customer_name || "Cliente WhatsApp",
+      telefono: customerPhone,
+      vehiculoMarca: memory.vehicle || "",
+      descripcion: `${productName}${productPrice ? " (" + productPrice + " MXN)" : ""} - Punto medio`
+    }).catch((err) => {
+      console.error("Failed to create quote in LED store:", err.message);
+    });
+
     const adminMsg = [
       "🔔 *Nuevo Lead - Punto Medio*",
       "",
@@ -639,6 +660,23 @@ Las CSP Premium son las mejores 🔥
     };
     const productName = productNames[memory.selected_product] || memory.selected_product || "N/A";
     const productPrice = productPrices[memory.selected_product] || "";
+
+    crearClienteEnTienda({
+      nombre: customerName || memory.customer_name || "Cliente WhatsApp",
+      telefono: customerPhone,
+      vehiculo: memory.vehicle || ""
+    }).catch((err) => {
+      console.error("Failed to sync client to LED store:", err.message);
+    });
+
+    crearCotizacionEnTienda({
+      nombre: customerName || memory.customer_name || "Cliente WhatsApp",
+      telefono: customerPhone,
+      vehiculoMarca: memory.vehicle || "",
+      descripcion: `${productName}${productPrice ? " (" + productPrice + " MXN)" : ""} - Domicilio: ${message}`
+    }).catch((err) => {
+      console.error("Failed to create quote in LED store:", err.message);
+    });
 
     const adminMsg = [
       "🔔 *Nuevo Lead - Domicilio*",

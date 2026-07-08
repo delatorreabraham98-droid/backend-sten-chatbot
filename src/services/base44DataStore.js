@@ -1,7 +1,7 @@
 import { config } from "../config.js";
 import { createEntity, listEntity, updateEntity } from "./base44Client.js";
 
-export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
+export async function getChannelByPhoneNumber({ phoneNumberId }) {
   const channels = await listEntity("Channel", {
     q: {
       type: "whatsapp",
@@ -18,7 +18,7 @@ export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
 
   const [client, bot, knowledgeItems] = await Promise.all([
     listEntity("Client", { q: { id: channel.client_id }, limit: 1 }),
-    listEntity("Bot", { q: { id: channel.bot_id, active: true }, limit: 1 }),
+    listEntity("Bot", { q: { id: channel.bot_id }, limit: 1 }),
     listEntity("KnowledgeItem", {
       q: { client_id: channel.client_id, active: true },
       limit: 20,
@@ -26,19 +26,18 @@ export async function getRuntimeContextForWhatsApp({ phoneNumberId }) {
     })
   ]);
 
-  if (!bot[0]) {
-    throw new Error(`No active bot found for channel ${channel.id}`);
-  }
+  const botRecord = bot[0];
 
   return {
     channel,
     client: client[0] || null,
-    bot: bot[0],
+    bot: botRecord,
+    botActive: botRecord?.active === true,
     knowledgeItems
   };
 }
 
-export async function findOrCreateConversation({ channel, message }) {
+export async function findOrCreateConversation({ channel, message, botActive = true }) {
   const existing = await listEntity("Conversation", {
     q: {
       channel_id: channel.id,
@@ -49,10 +48,19 @@ export async function findOrCreateConversation({ channel, message }) {
   });
 
   const now = new Date().toISOString();
+  let status;
+
+  if (botActive && existing[0]?.status === "waiting_human") {
+    status = "waiting_human";
+  } else if (botActive) {
+    status = "bot_active";
+  } else {
+    status = "waiting_human";
+  }
 
   if (existing[0]) {
     return updateEntity("Conversation", existing[0].id, {
-      status: "bot_active",
+      status,
       last_message_at: now,
       last_message_preview: trimPreview(message.text),
       message_count: Number(existing[0].message_count || 0) + 1
@@ -66,11 +74,15 @@ export async function findOrCreateConversation({ channel, message }) {
     customer_name: message.customerName || "Cliente WhatsApp",
     customer_phone: message.from,
     channel_type: "whatsapp",
-    status: "bot_active",
+    status,
     last_message_at: now,
     last_message_preview: trimPreview(message.text),
     message_count: 1
   });
+}
+
+export async function updateConversationStatus(conversationId, status) {
+  return updateEntity("Conversation", conversationId, { status });
 }
 
 export async function getConversationHistory(conversationId, limit = 10) {

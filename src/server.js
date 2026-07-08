@@ -2,6 +2,7 @@ import cors from "cors";
 import express from "express";
 import { config, getMissingRequiredEnv } from "./config.js";
 import { whatsappRouter } from "./routes/whatsapp.js";
+import { adminRouter } from "./routes/admin.js";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.get("/health", (_req, res) => {
 });
 
 app.use(whatsappRouter);
+app.use(adminRouter);
 
 app.use((err, _req, res, _next) => {
   console.error("Unhandled request error", err);
