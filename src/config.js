@@ -12,8 +12,16 @@ export const config = {
     phoneNumberId: process.env.META_PHONE_NUMBER_ID || "",
     whatsappBusinessAccountId: process.env.WHATSAPP_BUSINESS_ACCOUNT_ID || ""
   },
+  messenger: {
+    verifyToken: process.env.MESSENGER_VERIFY_TOKEN || "",
+    pageAccessToken: process.env.MESSENGER_PAGE_ACCESS_TOKEN || ""
+  },
+  groq: {
+    apiKey: process.env.GROQ_API_KEY || ""
+  },
   openai: {
     apiKey: process.env.OPENAI_API_KEY || "",
+    baseUrl: process.env.OPENAI_BASE_URL || "https://api.openai.com/v1",
     model: process.env.OPENAI_MODEL || "gpt-4.1-mini"
   },
   base44: {
@@ -26,7 +34,8 @@ export const config = {
     businessName: process.env.BOT_BUSINESS_NAME || "La Torre LED Shop",
     timezone: process.env.BOT_TIMEZONE || "America/Tijuana"
   },
-  adminWhatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || ""
+  adminWhatsappNumber: process.env.ADMIN_WHATSAPP_NUMBER || "",
+  respondWithAudio: process.env.RESPOND_WITH_AUDIO === "true"
 };
 
 export function getMissingRequiredEnv() {
@@ -34,6 +43,7 @@ export function getMissingRequiredEnv() {
     META_VERIFY_TOKEN: config.meta.verifyToken,
     META_ACCESS_TOKEN: config.meta.accessToken,
     META_PHONE_NUMBER_ID: config.meta.phoneNumberId,
+    MESSENGER_PAGE_ACCESS_TOKEN: config.messenger.pageAccessToken,
     OPENAI_API_KEY: config.openai.apiKey,
     BASE44_APP_ID: config.base44.appId,
     BASE44_API_KEY: config.base44.apiKey

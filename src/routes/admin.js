@@ -1,5 +1,6 @@
 import express from "express";
-import { listEntity, updateEntity } from "../services/base44Client.js";
+import { config } from "../config.js";
+import { createEntity, listEntity, updateEntity } from "../services/base44Client.js";
 import { sendWhatsAppTextMessage } from "../services/metaWhatsApp.js";
 import {
   createConversationMessage,
@@ -9,7 +10,7 @@ import {
 export const adminRouter = express.Router();
 
 adminRouter.post("/api/send-manual-reply", async (req, res) => {
-  const { conversationId, messageText, channelPhoneNumberId, customerPhone } = req.body;
+  const { conversationId, messageText, customerPhone } = req.body;
 
   if (!conversationId || !messageText || !customerPhone) {
     return res.status(400).json({ error: "Faltan campos requeridos: conversationId, messageText, customerPhone" });
@@ -42,10 +43,7 @@ adminRouter.post("/api/send-manual-reply", async (req, res) => {
 
     await updateConversationStatus(conversation.id, "waiting_human");
 
-    console.log("Manual reply sent", {
-      conversationId,
-      to: customerPhone
-    });
+    console.log("Manual reply sent", { conversationId, to: customerPhone });
 
     res.json({ success: true });
   } catch (error) {
@@ -110,6 +108,73 @@ adminRouter.get("/api/conversations/:id/messages", async (req, res) => {
     res.json({ messages });
   } catch (error) {
     console.error("Failed to get messages", { conversationId: id, error: error.message });
+    res.status(500).json({ error: error.message });
+  }
+});
+
+adminRouter.post("/admin/bootstrap", async (_req, res) => {
+  try {
+    const phoneNumberId = config.meta.phoneNumberId;
+    if (!phoneNumberId) {
+      return res.status(400).json({ error: "META_PHONE_NUMBER_ID is not configured" });
+    }
+
+    const existingChannel = await listEntity("Channel", {
+      q: { phone_number_id: phoneNumberId, type: "whatsapp", status: "active" },
+      limit: 1
+    });
+
+    if (existingChannel[0]) {
+      return res.json({
+        message: "Channel already exists",
+        channel: existingChannel[0]
+      });
+    }
+
+    const existingClients = await listEntity("Client", { q: { active: true }, limit: 1 });
+    let client = existingClients[0];
+
+    if (!client) {
+      client = await createEntity("Client", {
+        name: config.bot.businessName,
+        active: true,
+        timezone: config.bot.timezone
+      });
+    }
+
+    const existingBots = await listEntity("Bot", {
+      q: { client_id: client.id, active: true },
+      limit: 1
+    });
+
+    let bot = existingBots[0];
+
+    if (!bot) {
+      bot = await createEntity("Bot", {
+        name: `${config.bot.businessName} Bot`,
+        client_id: client.id,
+        active: true,
+        business_name: config.bot.businessName,
+        timezone: config.bot.timezone
+      });
+    }
+
+    const channel = await createEntity("Channel", {
+      type: "whatsapp",
+      phone_number_id: phoneNumberId,
+      status: "active",
+      client_id: client.id,
+      bot_id: bot.id
+    });
+
+    res.status(201).json({
+      message: "Bootstrap complete",
+      client,
+      bot,
+      channel
+    });
+  } catch (error) {
+    console.error("Bootstrap failed", error);
     res.status(500).json({ error: error.message });
   }
 });

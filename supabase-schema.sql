@@ -66,6 +66,17 @@ create table if not exists vehicle_bulb_cache (
   created_at timestamptz default now()
 );
 
+create table if not exists conversation_messages (
+  id bigint generated always as identity primary key,
+  phone text not null,
+  role text not null,
+  message text not null,
+  created_at timestamptz default now()
+);
+
+create index if not exists idx_messages_phone_time
+  on conversation_messages (phone, created_at desc);
+
 create table if not exists conversation_analytics (
 
   id bigint generated always as identity primary key,

@@ -11,9 +11,26 @@ export async function getChannelByPhoneNumber({ phoneNumberId }) {
     limit: 1
   });
 
-  const channel = channels[0];
+  let channel = channels[0];
+
   if (!channel) {
-    throw new Error(`No active WhatsApp channel found for phone_number_id ${phoneNumberId}`);
+    const fallbackChannels = await listEntity("Channel", {
+      q: {
+        type: "whatsapp",
+        status: "active"
+      },
+      limit: 1
+    });
+
+    channel = fallbackChannels[0];
+  }
+
+  if (!channel) {
+    throw new Error(
+      `No active WhatsApp channel found for phone_number_id ${phoneNumberId}. ` +
+      `Create a Channel record in Base44 with phone_number_id="${phoneNumberId}", type="whatsapp", status="active", ` +
+      `and ensure it links to an existing Client and Bot record.`
+    );
   }
 
   const [client, bot, knowledgeItems] = await Promise.all([
@@ -37,7 +54,55 @@ export async function getChannelByPhoneNumber({ phoneNumberId }) {
   };
 }
 
-export async function findOrCreateConversation({ channel, message, botActive = true }) {
+export async function getRuntimeContextForMessenger({ pageId }) {
+  const channels = await listEntity("Channel", {
+    q: {
+      type: "messenger",
+      page_id: pageId,
+      status: "active"
+    },
+    limit: 1
+  });
+
+  let channel = channels[0];
+
+  if (!channel) {
+    const fallbackChannels = await listEntity("Channel", {
+      q: { type: "messenger", status: "active" },
+      limit: 1
+    });
+    channel = fallbackChannels[0];
+  }
+
+  if (!channel) {
+    throw new Error(
+      `No active Messenger channel found for page_id ${pageId}. ` +
+      `Create a Channel record in Base44 with page_id="${pageId}", type="messenger", status="active".`
+    );
+  }
+
+  const [client, bot, knowledgeItems] = await Promise.all([
+    listEntity("Client", { q: { id: channel.client_id }, limit: 1 }),
+    listEntity("Bot", { q: { id: channel.bot_id }, limit: 1 }),
+    listEntity("KnowledgeItem", {
+      q: { client_id: channel.client_id, active: true },
+      limit: 20,
+      sortBy: "-updated_date"
+    })
+  ]);
+
+  const botRecord = bot[0];
+
+  return {
+    channel,
+    client: client[0] || null,
+    bot: botRecord,
+    botActive: botRecord?.active === true,
+    knowledgeItems
+  };
+}
+
+export async function findOrCreateConversation({ channel, message, channelType, botActive = true }) {
   const existing = await listEntity("Conversation", {
     q: {
       channel_id: channel.id,
@@ -58,6 +123,9 @@ export async function findOrCreateConversation({ channel, message, botActive = t
     status = "waiting_human";
   }
 
+  const type = channelType || channel.type || "whatsapp";
+  const customerName = message.customerName || (type === "messenger" ? "Cliente Messenger" : "Cliente WhatsApp");
+
   if (existing[0]) {
     return updateEntity("Conversation", existing[0].id, {
       status,
@@ -71,9 +139,9 @@ export async function findOrCreateConversation({ channel, message, botActive = t
     client_id: channel.client_id,
     channel_id: channel.id,
     external_user_id: message.from,
-    customer_name: message.customerName || "Cliente WhatsApp",
-    customer_phone: message.from,
-    channel_type: "whatsapp",
+    customer_name: customerName,
+    customer_phone: type === "whatsapp" ? message.from : "",
+    channel_type: type,
     status,
     last_message_at: now,
     last_message_preview: trimPreview(message.text),
