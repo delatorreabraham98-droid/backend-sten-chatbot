@@ -113,9 +113,10 @@ export async function findOrCreateConversation({ channel, message, channelType, 
   });
 
   const now = new Date().toISOString();
+  const currentStatus = existing[0]?.status;
   let status;
 
-  if (botActive && existing[0]?.status === "waiting_human") {
+  if (currentStatus === "waiting_human") {
     status = "waiting_human";
   } else if (botActive) {
     status = "bot_active";
@@ -126,27 +127,33 @@ export async function findOrCreateConversation({ channel, message, channelType, 
   const type = channelType || channel.type || "whatsapp";
   const customerName = message.customerName || (type === "messenger" ? "Cliente Messenger" : "Cliente WhatsApp");
 
+  let conversation;
+
   if (existing[0]) {
-    return updateEntity("Conversation", existing[0].id, {
+    conversation = await updateEntity("Conversation", existing[0].id, {
       status,
       last_message_at: now,
       last_message_preview: trimPreview(message.text),
       message_count: Number(existing[0].message_count || 0) + 1
     });
+  } else {
+    conversation = await createEntity("Conversation", {
+      client_id: channel.client_id,
+      channel_id: channel.id,
+      external_user_id: message.from,
+      customer_name: customerName,
+      customer_phone: type === "whatsapp" ? message.from : "",
+      channel_type: type,
+      status,
+      last_message_at: now,
+      last_message_preview: trimPreview(message.text),
+      message_count: 1
+    });
   }
 
-  return createEntity("Conversation", {
-    client_id: channel.client_id,
-    channel_id: channel.id,
-    external_user_id: message.from,
-    customer_name: customerName,
-    customer_phone: type === "whatsapp" ? message.from : "",
-    channel_type: type,
-    status,
-    last_message_at: now,
-    last_message_preview: trimPreview(message.text),
-    message_count: 1
-  });
+  conversation.currentStatus = currentStatus;
+
+  return conversation;
 }
 
 export async function updateConversationStatus(conversationId, status) {

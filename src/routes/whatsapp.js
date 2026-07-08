@@ -75,9 +75,9 @@ async function processInboundMessage(message) {
     rawPayload: message.raw
   });
 
-  const conversationStatus = conversation?.status || "bot_active";
+  const conversationStatus = conversation?.currentStatus || conversation?.status || "bot_active";
 
-  if (!runtimeContext.botActive || conversationStatus === "waiting_human") {
+  if (conversationStatus === "waiting_human" || !runtimeContext.botActive) {
     console.log("Modo humano — mensaje guardado sin respuesta automatica", {
       messageId: message.messageId,
       from: message.from,
