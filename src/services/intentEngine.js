@@ -179,6 +179,11 @@ Las de 2 caras salen muy buenas si busca algo económico.`;
   }
 }
 
+export function buildContinueSaleReply(memory) {
+  if (!memory || !memory.vehicle) return null;
+  return "Seguimos con su " + memory.vehicle + ". Las opciones son COB 2 Caras $250, COB 4 Caras $350, CSP Premium $500. Cual le interesa?";
+}
+
 export function buildProductReply(intent, vehicle) {
 
   if (!intent) return null;

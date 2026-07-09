@@ -6,7 +6,9 @@ import {
 } from "./supabaseMemory.js";
 
 import {
-  detectVehicleInfo
+  detectVehicleInfo,
+  hasYearOnly,
+  buildVehicleResponse
 } from "./vehicleEngine.js";
 
 import {
@@ -16,7 +18,9 @@ import {
 import {
   detectProductIntent,
   buildProductReply,
-  buildObjectionReply
+  buildObjectionReply,
+  buildContinueSaleReply,
+  detectObjection
 } from "./intentEngine.js";
 
 import { sendWhatsAppTextMessage } from "./metaWhatsApp.js";
@@ -550,9 +554,105 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
     return bypassReply;
   }
 
-  // 2. GPT + tools (skip if no API key)
+  // ──────────────────────────────────────────────
+  // 2. Rule chain — backend logic first
+  // ──────────────────────────────────────────────
+
   let reply = null;
-  if (config.openai.apiKey) {
+
+  // 2a. Detect new vehicle from message
+  if (!memory.vehicle) {
+    const vehicle = detectVehicleInfo(message);
+    if (vehicle) {
+      memory.vehicle = vehicle.model;
+      memory.vehicle_year = vehicle.year;
+      memory.bulb_low = vehicle.lowBeam;
+      memory.bulb_high = vehicle.highBeam;
+      memory.bulb_type = vehicle.type;
+      memory.conversation_stage = "vehicle_identified";
+      await saveCustomerMemory(customerPhone, memory);
+      reply = buildVehicleResponse(vehicle);
+    }
+  }
+
+  // 2b. Year-only + existing vehicle → respond with full data
+  if (!reply && memory.vehicle) {
+    const yearOnly = hasYearOnly(message);
+    if (yearOnly) {
+      memory.vehicle_year = yearOnly;
+      memory.conversation_stage = "vehicle_identified";
+      await saveCustomerMemory(customerPhone, memory);
+      reply = buildVehicleResponse({
+        model: memory.vehicle,
+        year: yearOnly,
+        lowBeam: memory.bulb_low,
+        highBeam: memory.bulb_high,
+        type: memory.bulb_type
+      });
+    }
+  }
+
+  // 2c. Web lookup when year detected but no local match
+  if (!reply && !memory.vehicle) {
+    const year = (message.match(/\b(19|20)\d{2}\b/) || [])[0] || null;
+    if (year) {
+      const webResult = await webVehicleLookup({ message, year });
+      if (webResult) {
+        memory.vehicle = webResult.model;
+        memory.vehicle_year = webResult.year;
+        memory.bulb_low = webResult.lowBeam;
+        memory.bulb_high = webResult.highBeam;
+        memory.bulb_type = webResult.type;
+        memory.conversation_stage = "vehicle_identified";
+        await saveCustomerMemory(customerPhone, memory);
+        reply = buildVehicleResponse(webResult);
+      }
+    }
+  }
+
+  // 2d. Objection handling (price or bad experience)
+  if (!reply) {
+    const objectionType = detectObjection(message);
+    if (objectionType) {
+      reply = buildObjectionReply(objectionType);
+    }
+  }
+
+  // 2e. Product intent detected (only if we have vehicle)
+  if (!reply && memory.vehicle && !memory.selected_product) {
+    const intent = detectProductIntent(message);
+    if (intent) {
+      memory.selected_product = intent.product;
+      memory.conversation_stage = "product_selected";
+      memory.lead_score = (memory.lead_score || 0) + 25;
+      await saveCustomerMemory(customerPhone, memory);
+      reply = buildProductReply(intent, { lowBeam: memory.bulb_low, highBeam: memory.bulb_high });
+    }
+  }
+
+  // 2f. Premium/quality keywords without vehicle → ask for vehicle
+  if (!reply && !memory.vehicle) {
+    const qualityWords = ["premium", "mejores", "recomendadas", "chafas", "buenas", "calidad", "baratas", "economicas"];
+    if (qualityWords.some(w => lower.includes(w))) {
+      reply = getGreeting() + ". Tenemos focos LED desde $250 hasta $500. Cual es el año y modelo de su vehículo para recomendarle la mejor opción?";
+    }
+  }
+
+  // 2g. Vehicle known but no product selected → continue sale
+  if (!reply && memory.vehicle && !memory.selected_product) {
+    reply = buildContinueSaleReply(memory);
+  }
+
+  // 2h. Vehicle + product known → ask installation/delivery
+  if (!reply && memory.vehicle && memory.selected_product) {
+    reply = "Seguimos con su pedido de " + memory.selected_product + ". Desea instalacion o entrega?";
+  }
+
+  // ──────────────────────────────────────────────
+  // 3. GPT + tools (fallback if rules didn't match)
+  // ──────────────────────────────────────────────
+
+  if (!reply && config.openai.apiKey) {
     const history = await getConversationHistory(customerPhone, 10);
     const systemPrompt = buildSystemPrompt({ history, memory, customerName });
     const handlers = createToolHandlers(customerPhone);
@@ -563,49 +663,9 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
     );
   }
 
-  // 3. Fallback — detect vehicle & product without GPT
+  // 4. Final fallback (if GPT also failed)
   if (!reply) {
-    if (!memory.vehicle) {
-      const vehicle = detectVehicleInfo(message);
-      if (vehicle) {
-        memory.vehicle = vehicle.model;
-        memory.vehicle_year = vehicle.year;
-        memory.bulb_low = vehicle.lowBeam;
-        memory.bulb_high = vehicle.highBeam;
-        memory.bulb_type = vehicle.type;
-        memory.conversation_stage = "vehicle_identified";
-        await saveCustomerMemory(customerPhone, memory);
-      } else {
-        const year = (message.match(/\b(19|20)\d{2}\b/) || [])[0] || null;
-        if (year) {
-          const webResult = await webVehicleLookup({ message, year });
-          if (webResult) {
-            memory.vehicle = webResult.model;
-            memory.vehicle_year = webResult.year;
-            memory.bulb_low = webResult.lowBeam;
-            memory.bulb_high = webResult.highBeam;
-            memory.bulb_type = webResult.type;
-            memory.conversation_stage = "vehicle_identified";
-            await saveCustomerMemory(customerPhone, memory);
-          }
-        }
-      }
-    }
-
-    if (memory.vehicle && !memory.selected_product) {
-      const intent = detectProductIntent(message);
-      if (intent) {
-        memory.selected_product = intent.product;
-        memory.conversation_stage = "product_selected";
-        memory.lead_score = (memory.lead_score || 0) + 25;
-        await saveCustomerMemory(customerPhone, memory);
-        reply = buildProductReply(intent, { lowBeam: memory.bulb_low, highBeam: memory.bulb_high });
-      }
-    }
-
-    if (!reply) {
-      reply = fallbackReply(memory);
-    }
+    reply = fallbackReply(memory);
   }
 
   // 4. Save conversation history
