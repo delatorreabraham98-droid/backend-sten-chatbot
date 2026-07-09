@@ -5,7 +5,8 @@ import {
   createConversationMessage,
   createLeadIfCommercialIntent,
   findOrCreateConversation,
-  getChannelByPhoneNumber
+  getChannelByPhoneNumber,
+  listEntity
 } from "../services/base44DataStore.js";
 import {
   sendWhatsAppTextMessage,
@@ -75,14 +76,30 @@ async function processInboundMessage(message) {
     rawPayload: message.raw
   });
 
-  const conversationStatus = conversation?.currentStatus || conversation?.status || "bot_active";
+  const rawStatus = conversation.__previousStatus || conversation.status;
 
-  if (conversationStatus === "waiting_human" || !runtimeContext.botActive) {
+  if (rawStatus === "waiting_human" || !runtimeContext.botActive) {
     console.log("Modo humano — mensaje guardado sin respuesta automatica", {
       messageId: message.messageId,
       from: message.from,
       conversationId: conversation.id,
-      status: conversationStatus
+      status: rawStatus
+    });
+    return;
+  }
+
+  const freshConversations = await listEntity("Conversation", {
+    q: { id: conversation.id },
+    limit: 1
+  });
+  const freshStatus = freshConversations[0]?.status;
+
+  if (freshStatus === "waiting_human") {
+    console.log("Modo humano (re-verify) — mensaje guardado sin respuesta automatica", {
+      messageId: message.messageId,
+      from: message.from,
+      conversationId: conversation.id,
+      status: freshStatus
     });
     return;
   }

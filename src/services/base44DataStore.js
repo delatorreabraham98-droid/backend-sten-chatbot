@@ -1,6 +1,8 @@
 import { config } from "../config.js";
 import { createEntity, listEntity, updateEntity } from "./base44Client.js";
 
+export { listEntity };
+
 export async function getChannelByPhoneNumber({ phoneNumberId }) {
   const channels = await listEntity("Channel", {
     q: {
@@ -151,7 +153,7 @@ export async function findOrCreateConversation({ channel, message, channelType, 
     });
   }
 
-  conversation.currentStatus = currentStatus;
+  conversation.__previousStatus = currentStatus;
 
   return conversation;
 }
