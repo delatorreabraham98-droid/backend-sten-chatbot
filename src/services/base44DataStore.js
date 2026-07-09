@@ -114,6 +114,15 @@ export async function findOrCreateConversation({ channel, message, channelType, 
 
   const now = new Date().toISOString();
   const currentStatus = existing[0]?.status;
+
+  console.log("findOrCreateConversation debug", {
+    channelId: channel.id,
+    externalUserId: message.from,
+    foundExisting: !!existing[0],
+    currentStatus,
+    botActive
+  });
+
   let status;
 
   const humanModeActive = currentStatus === "waiting_human" || !botActive;
