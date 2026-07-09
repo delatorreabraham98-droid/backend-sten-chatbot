@@ -41,7 +41,7 @@ adminRouter.post("/api/send-manual-reply", async (req, res) => {
       rawPayload: messagePayload
     });
 
-    await updateConversationStatus(conversation.id, "waiting_human");
+    await updateConversationStatus(conversation.id, "needs_human");
 
     console.log("Manual reply sent", { conversationId, to: customerPhone });
 

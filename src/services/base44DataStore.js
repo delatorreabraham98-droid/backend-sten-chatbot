@@ -125,14 +125,14 @@ export async function findOrCreateConversation({ channel, message, channelType, 
 
   let status;
 
-  const humanModeActive = currentStatus === "waiting_human" || !botActive;
+  const humanModeActive = currentStatus === "needs_human" || !botActive;
 
-  if (currentStatus === "waiting_human") {
-    status = "waiting_human";
+  if (currentStatus === "needs_human") {
+    status = "needs_human";
   } else if (botActive) {
     status = "bot_active";
   } else {
-    status = "waiting_human";
+    status = "needs_human";
   }
 
   const type = channelType || channel.type || "whatsapp";
