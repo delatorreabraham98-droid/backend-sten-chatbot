@@ -648,6 +648,20 @@ export async function generateBotReply({ customerPhone, customerName, customerMe
     reply = "Seguimos con su pedido de " + memory.selected_product + ". Desea instalacion o entrega?";
   }
 
+  // 2i. Bulb code correction (e.g. "usa 9007", "no usa H4")
+  if (!reply && memory.vehicle) {
+    const bulbPattern = /\b(?:usa|es|tiene|lleva|necesita|utiliza|maneja|requiere|necesito|ocupo|necesitamos)\s+(H[134678]|H11|900[34567]|9012)\b/i;
+    const bulbMatch = message.match(bulbPattern);
+    if (bulbMatch) {
+      const detectedBulb = bulbMatch[1].toUpperCase();
+      memory.bulb_low = detectedBulb;
+      memory.bulb_high = detectedBulb;
+      memory.bulb_type = "dual";
+      await saveCustomerMemory(customerPhone, memory);
+      reply = "Corregido ✅. Anotamos que su " + memory.vehicle + " usa " + detectedBulb + ". Las opciones son COB 2 Caras $250, COB 4 Caras $350, CSP Premium $500. Cual le interesa?";
+    }
+  }
+
   // ──────────────────────────────────────────────
   // 3. GPT + tools (fallback if rules didn't match)
   // ──────────────────────────────────────────────

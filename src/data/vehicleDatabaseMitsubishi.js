@@ -1,8 +1,8 @@
 export const MITSUBISHI_DATABASE = {
 
   lancer: {
-    lowBeam: "H4",
-    highBeam: "H4",
+    lowBeam: "9007",
+    highBeam: "9007",
     fog: "H11",
     type: "dual",
     aliases: ["lancer"]
